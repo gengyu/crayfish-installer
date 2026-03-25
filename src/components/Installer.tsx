@@ -98,14 +98,18 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
       return
     }
 
+    const effectiveStage: InstallStage = isUninstallProgress && data.progress >= 100
+      ? 'idle'
+      : (data.stage as InstallStage)
+
     setState(prev => ({
       ...prev,
-      stage: data.stage as InstallStage,
+      stage: effectiveStage,
       progress: data.progress,
       detail: data.detail || prev.detail
     }))
 
-    if (data.stage === 'completed') {
+    if (data.stage === 'completed' || (isUninstallProgress && data.progress >= 100)) {
       setIsSubmitting(false)
     }
   }, [])
@@ -205,6 +209,10 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
         errorDetail: null,
         attempts: 0
       }))
+
+      activeOperationRef.current = null
+      setIsSubmitting(false)
+
       const nextRuntimeStatus = await refreshRuntimeState()
       setInstallDetected(nextRuntimeStatus.openclaw.exists)
       onInstallationChanged()
@@ -251,7 +259,8 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
   }
 
   const isInstalling = ['checking', 'preparing', 'downloading', 'verifying', 'extracting', 'finalizing'].includes(state.stage)
-  const isBusy = isSubmitting || isInstalling || state.stage === 'uninstalling'
+  const isUninstalling = state.stage === 'uninstalling' && state.progress < 100
+  const isBusy = isSubmitting || isInstalling || isUninstalling
   const isInstalled = installDetected || Boolean(existingInstall?.exists) || Boolean(runtimeStatus?.openclaw.exists)
   const isSupportedDesktopPlatform = systemInfo
     ? systemInfo.platform === 'win32' || systemInfo.platform === 'darwin'
