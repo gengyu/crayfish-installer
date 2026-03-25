@@ -1,0 +1,223 @@
+<body class="bg-brand-50 min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+<div id="installer-container" class="bg-white w-full max-w-[1000px] rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-brand-100">
+
+    <!-- Sidebar Navigation -->
+    <div id="sidebar" class="w-full md:w-64 bg-brand-50 p-6 md:p-8 border-b md:border-b-0 md:border-r border-brand-200 flex flex-col">
+        <div class="flex items-center gap-3 mb-10">
+            <div class="w-8 h-8 rounded-lg bg-brand-900 flex items-center justify-center text-white font-bold text-sm">
+                S
+            </div>
+            <span class="font-bold text-brand-900 text-lg">SoftwarePro</span>
+        </div>
+
+        <nav class="flex-1">
+            <ul class="space-y-6">
+                <!-- Active Step -->
+                <li class="relative flex items-start group">
+                    <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-200"></div>
+                    <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-900 text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                        1
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-semibold text-brand-900">License Agreement</p>
+                        <p class="text-xs text-brand-500 mt-1">Review terms &amp; conditions</p>
+                    </div>
+                </li>
+
+                <!-- Pending Steps -->
+                <li class="relative flex items-start group">
+                    <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-200"></div>
+                    <div class="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-brand-300 text-brand-400 text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                        2
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-brand-500">Installation Settings</p>
+                        <p class="text-xs text-brand-400 mt-1">Configure preferences</p>
+                    </div>
+                </li>
+
+                <li class="relative flex items-start group">
+                    <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-200"></div>
+                    <div class="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-brand-300 text-brand-400 text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                        3
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-brand-500">Installation Progress</p>
+                        <p class="text-xs text-brand-400 mt-1">Installing files</p>
+                    </div>
+                </li>
+
+                <li class="relative flex items-start group">
+                    <div class="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-brand-300 text-brand-400 text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                        4
+                    </div>
+                    <div class="ml-4">
+                        <p class="text-sm font-medium text-brand-500">Success</p>
+                        <p class="text-xs text-brand-400 mt-1">Ready to use</p>
+                    </div>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="mt-auto pt-8 text-xs text-brand-400">
+            v2.4.1 build 8920
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="main-content" class="flex-1 flex flex-col bg-white">
+
+        <!-- Header -->
+        <div class="px-8 py-6 border-b border-brand-100 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-brand-900">End User License Agreement</h1>
+            <button class="text-brand-400 hover:text-brand-600 transition-colors">
+                <i class="mr-2" data-fa-i2svg=""><svg class="svg-inline--fa fa-language" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="language" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" data-fa-i2svg=""><path fill="currentColor" d="M0 128C0 92.7 28.7 64 64 64H256h48 16H576c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H320 304 256 64c-35.3 0-64-28.7-64-64V128zm320 0V384H576V128H320zM178.3 175.9c-3.2-7.2-10.4-11.9-18.3-11.9s-15.1 4.7-18.3 11.9l-64 144c-4.5 10.1 .1 21.9 10.2 26.4s21.9-.1 26.4-10.2l8.9-20.1h73.6l8.9 20.1c4.5 10.1 16.3 14.6 26.4 10.2s14.6-16.3 10.2-26.4l-64-144zM160 233.2L179 276H141l19-42.8zM448 164c11 0 20 9 20 20v4h44 16c11 0 20 9 20 20s-9 20-20 20h-2l-1.6 4.5c-8.9 24.4-22.4 46.6-39.6 65.4c.9 .6 1.8 1.1 2.7 1.6l18.9 11.3c9.5 5.7 12.5 18 6.9 27.4s-18 12.5-27.4 6.9l-18.9-11.3c-4.5-2.7-8.8-5.5-13.1-8.5c-10.6 7.5-21.9 14-34 19.4l-3.6 1.6c-10.1 4.5-21.9-.1-26.4-10.2s.1-21.9 10.2-26.4l3.6-1.6c6.4-2.9 12.6-6.1 18.5-9.8l-12.2-12.2c-7.8-7.8-7.8-20.5 0-28.3s20.5-7.8 28.3 0l14.6 14.6 .5 .5c12.4-13.1 22.5-28.3 29.8-45H448 376c-11 0-20-9-20-20s9-20 20-20h52v-4c0-11 9-20 20-20z"></path></svg></i>English
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="flex-1 p-8 flex flex-col">
+            <p class="text-sm text-brand-600 mb-4">Please read the following license agreement carefully before proceeding with the installation.</p>
+
+            <!-- EULA Text Area -->
+            <div class="flex-1 bg-brand-50 border border-brand-200 rounded-lg p-6 overflow-y-auto mb-6 h-64 text-sm text-brand-700 leading-relaxed shadow-inner">
+                <h3 class="font-bold text-brand-900 mb-4">SOFTWAREPRO END USER LICENSE AGREEMENT</h3>
+                <p class="mb-4">IMPORTANT - READ CAREFULLY: This End User License Agreement ("EULA") is a legal agreement between you (either an individual or a single entity) and SoftwarePro Inc. for the software product identified above, which includes computer software and may include associated media, printed materials, and "online" or electronic documentation ("SOFTWARE PRODUCT").</p>
+
+                <h4 class="font-semibold text-brand-900 mt-6 mb-2">1. GRANT OF LICENSE.</h4>
+                <p class="mb-4">SoftwarePro grants you the following rights provided that you comply with all terms and conditions of this EULA: Installation and Use. You may install and use a copy of the SOFTWARE PRODUCT on your personal computer or other device.</p>
+
+                <h4 class="font-semibold text-brand-900 mt-6 mb-2">2. DESCRIPTION OF OTHER RIGHTS AND LIMITATIONS.</h4>
+                <p class="mb-2">- Limitations on Reverse Engineering, Decompilation, and Disassembly. You may not reverse engineer, decompile, or disassemble the SOFTWARE PRODUCT.</p>
+                <p class="mb-2">- Separation of Components. The SOFTWARE PRODUCT is licensed as a single product. Its component parts may not be separated for use on more than one device.</p>
+                <p class="mb-4">- Termination. Without prejudice to any other rights, SoftwarePro may terminate this EULA if you fail to comply with the terms and conditions of this EULA.</p>
+
+                <h4 class="font-semibold text-brand-900 mt-6 mb-2">3. COPYRIGHT.</h4>
+                <p class="mb-4">All title and copyrights in and to the SOFTWARE PRODUCT, the accompanying printed materials, and any copies of the SOFTWARE PRODUCT are owned by SoftwarePro or its suppliers.</p>
+
+                <p class="mt-8 text-xs text-brand-500 italic">Last updated: October 2023</p>
+            </div>
+
+            <!-- Acceptance Checkbox -->
+            <div class="mt-auto">
+                <label class="flex items-start gap-3 cursor-pointer group">
+                    <div class="relative flex items-center justify-center mt-0.5">
+                        <input type="checkbox" id="accept-terms" class="peer appearance-none w-5 h-5 border-2 border-brand-300 rounded bg-white checked:bg-brand-900 checked:border-brand-900 transition-all cursor-pointer">
+                        <i class="absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                    </div>
+                    <span class="text-sm text-brand-700 group-hover:text-brand-900 transition-colors">
+                            I have read and agree to the terms of the End User License Agreement
+                        </span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Footer Actions -->
+        <div class="px-8 py-6 border-t border-brand-100 bg-brand-50 flex items-center justify-between">
+            <button class="px-6 py-2.5 text-sm font-medium text-brand-600 hover:text-brand-900 transition-colors">
+                Cancel
+            </button>
+            <div class="flex gap-3">
+                <button class="px-6 py-2.5 text-sm font-medium text-brand-600 bg-white border border-brand-200 rounded-lg hover:bg-brand-50 hover:text-brand-900 transition-all shadow-sm">
+                    Back
+                </button>
+                <!-- Disabled state initially, would be enabled via JS when checkbox is checked -->
+                <button class="px-8 py-2.5 text-sm font-medium text-white bg-brand-300 rounded-lg cursor-not-allowed transition-all shadow-sm" id="next-btn">
+                    Next
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Simple script to handle checkbox state for demonstration
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkbox = document.getElementById('accept-terms');
+        const nextBtn = document.getElementById('next-btn');
+
+        checkbox.addEventListener('change', function() {
+            if(this.checked) {
+                nextBtn.classList.remove('bg-brand-300', 'cursor-not-allowed');
+                nextBtn.classList.add('bg-brand-900', 'hover:bg-brand-800', 'cursor-pointer');
+            } else {
+                nextBtn.classList.add('bg-brand-300', 'cursor-not-allowed');
+                nextBtn.classList.remove('bg-brand-900', 'hover:bg-brand-800', 'cursor-pointer');
+            }
+        });
+    });
+</script>
+
+<script>
+    (function() {
+        function blockEvent(e) {
+            if (!e) return false;
+            if (typeof e.preventDefault === 'function') e.preventDefault();
+            if (typeof e.stopPropagation === 'function') e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+            return false;
+        }
+
+        // Block all anchor navigations (including http(s), mailto, tel, hash, fragments)
+        document.addEventListener('click', function(e) {
+            var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+            if (!a) return;
+            return blockEvent(e);
+        }, true);
+
+        // Neutralize programmatic navigation attempts
+        try { window.open = function() { return null }; } catch (_) {}
+        try {
+            var noop = function(){};
+            history.pushState = noop;
+            history.replaceState = noop;
+        } catch (_) {}
+        try {
+            if (window.location) {
+                window.location.assign = function(){};
+                window.location.replace = function(){};
+            }
+        } catch (_) {}
+    })();
+</script>
+<script>
+    (function() {
+        function _uxpResizeCharts() {
+            if (window.Plotly) {
+                document.querySelectorAll('.plot-container.plotly').forEach(function(pc) {
+                    var gd = pc.parentElement;
+                    if (!gd) return;
+                    var rect = gd.getBoundingClientRect();
+                    if (rect.width <= 0 || rect.height <= 0) return;
+                    try { window.Plotly.relayout(gd, { width: Math.round(rect.width), height: Math.round(rect.height) }); } catch(e) {}
+                });
+            }
+            if (window.ApexCharts && window.Apex && window.Apex._chartInstances) {
+                window.Apex._chartInstances.forEach(function(inst) {
+                    try { (inst.chart || inst).updateOptions({}, false, false); } catch(e) {}
+                });
+            }
+            if (window.Chart) {
+                try { Object.values(window.Chart.instances || {}).forEach(function(c) { c.resize(); }); } catch(e) {}
+            }
+        }
+
+        window.addEventListener('load', function() {
+            setTimeout(function() { _uxpResizeCharts(); setTimeout(_uxpResizeCharts, 500); }, 300);
+            try {
+                var _lastW = 0, _lastH = 0, _timer = 0;
+                new ResizeObserver(function() {
+                    var w = document.documentElement.clientWidth;
+                    var h = document.documentElement.clientHeight;
+                    if (w === _lastW && h === _lastH) return;
+                    _lastW = w; _lastH = h;
+                    clearTimeout(_timer);
+                    _timer = setTimeout(_uxpResizeCharts, 150);
+                }).observe(document.documentElement);
+            } catch(e) {}
+        });
+    })();
+</script>
+</body>

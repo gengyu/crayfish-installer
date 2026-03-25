@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
+    "build:win": "tsc && vite build && electron-builder --win nsis --x64",
+    "build:win:arm64": "tsc && vite build && electron-builder --win nsis --arm64",
+    "build:mac": "tsc && vite build && electron-builder --mac dmg",
     "preview": "vite preview",
     "electron:dev": "cross-env NODE_ENV=development electron ."
   },
@@ -30,6 +33,7 @@
   "build": {
     "appId": "com.crayfish.installer",
     "productName": "小龙虾安装器",
+    "copyright": "Copyright © 2026 小龙虾安装器",
     "directories": {
       "output": "release",
       "buildResources": "build"
@@ -47,8 +51,25 @@
     },
     "win": {
       "target": [
-        "nsis"
-      ]
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "executableName": "OpenClawInstaller"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": "always",
+      "createStartMenuShortcut": true,
+      "shortcutName": "小龙虾安装器",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
     }
   }
 }

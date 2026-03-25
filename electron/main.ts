@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
+import { basename, dirname, join } from 'path'
 import { spawn, exec } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -61,6 +61,31 @@ const NODE_LTS_BASE_URL = 'https://nodejs.org/dist/latest-v22.x/'
 const OPENCLAW_REQUIRED_NODE_VERSION = '22.16.0'
 const CN_NODE_MIRROR = 'https://npmmirror.com/mirrors/node'
 const NPM_REGISTRY = 'https://registry.npmmirror.com'
+
+function logStepStart(step: string, detail?: unknown) {
+  if (detail === undefined) {
+    log.info(`[STEP START] ${step}`)
+    return
+  }
+  log.info(`[STEP START] ${step}`, detail)
+}
+
+function logStepDone(step: string, detail?: unknown) {
+  if (detail === undefined) {
+    log.info(`[STEP DONE] ${step}`)
+    return
+  }
+  log.info(`[STEP DONE] ${step}`, detail)
+}
+
+function logStepFail(step: string, error: unknown) {
+  log.error(`[STEP FAIL] ${step}`, error)
+}
+
+function summarizeOutput(output: string, max = 240) {
+  const compact = output.replace(/\s+/g, ' ').trim()
+  return compact.length > max ? `${compact.slice(0, max)}...` : compact
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -178,6 +203,7 @@ ipcMain.handle('install-openclaw', async (event): Promise<InstallResult> => {
 
   while (attempts < 3) {
     attempts += 1
+    log.info(`[INSTALL ATTEMPT] ${attempts}`)
 
     try {
       if (attempts > 1) {
@@ -185,11 +211,12 @@ ipcMain.handle('install-openclaw', async (event): Promise<InstallResult> => {
       }
 
       const result = await installOpenClawFlow(event)
+      log.info(`[INSTALL SUCCESS] attempt=${attempts}`)
       return { ...result, attempts }
     } catch (error) {
       const rawMessage = error instanceof Error ? error.message : '未知错误'
       const translated = translateInstallError(rawMessage)
-      log.error(`安装失败，第 ${attempts} 次尝试:`, error)
+      log.error(`Install failed on attempt ${attempts}:`, error)
 
       if (attempts >= 3 || !isRecoverableInstallError(rawMessage)) {
         return {
@@ -203,7 +230,7 @@ ipcMain.handle('install-openclaw', async (event): Promise<InstallResult> => {
       try {
         await applyAutoRepair(rawMessage)
       } catch (repairError) {
-        log.error('自动修复失败:', repairError)
+        log.error('Auto repair failed:', repairError)
       }
     }
   }
@@ -218,13 +245,17 @@ ipcMain.handle('install-openclaw', async (event): Promise<InstallResult> => {
 
 async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<InstallResult> {
   try {
+    logStepStart('runtime-check')
     sendProgress(event, 'checking', 6, '正在检查 Node.js、npm、pnpm 环境')
     let runtime = await getRuntimeStatus()
+    logStepDone('runtime-check', runtime)
 
     if (!runtime.node.exists) {
+      logStepStart('install-node-missing')
       sendProgress(event, 'preparing', 14, '未检测到 Node.js，正在下载安装官方 Node.js')
       await installNodeJs(event)
       runtime = await getRuntimeStatus()
+      logStepDone('install-node-missing', runtime.node)
     }
 
     if (!runtime.node.exists) {
@@ -232,9 +263,11 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     }
 
     if (!isNodeVersionSupported(runtime.node.version)) {
+      logStepStart('upgrade-node-version', runtime.node)
       sendProgress(event, 'preparing', 18, `检测到 Node.js 版本过低，正在升级到 ${OPENCLAW_REQUIRED_NODE_VERSION} 或更高版本`)
       await upgradeNodeJs(event, runtime)
       runtime = await getRuntimeStatus()
+      logStepDone('upgrade-node-version', runtime.node)
     }
 
     if (!isNodeVersionSupported(runtime.node.version)) {
@@ -246,29 +279,41 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     }
 
     if (!runtime.pnpm.exists) {
+      logStepStart('install-pnpm', { npm: runtime.npm.path })
       sendProgress(event, 'preparing', 18, '正在安装 pnpm')
       await runGlobalCommand(getCommandPath(runtime.npm, 'npm'), ['install', '-g', 'pnpm'], getNodeMirrorEnv())
+      logStepDone('install-pnpm')
     }
 
+    logStepStart('verify-pnpm')
     const runtimeAfterPnpm = await getRuntimeStatus()
     if (!runtimeAfterPnpm.pnpm.exists) {
       throw new Error('pnpm 安装失败，请检查网络或全局安装权限。')
     }
+    logStepDone('verify-pnpm', runtimeAfterPnpm.pnpm)
 
+    logStepStart('configure-mirror')
     sendProgress(event, 'preparing', 32, '正在配置国内镜像，提高下载速度')
     await ensureMirrorConfigured()
+    logStepDone('configure-mirror')
 
+    logStepStart('install-openclaw-package', { pnpm: runtimeAfterPnpm.pnpm.path })
     sendProgress(event, 'downloading', 52, '正在通过 pnpm 全局安装 openclaw')
     await runGlobalCommand(getCommandPath(runtimeAfterPnpm.pnpm, 'pnpm'), ['add', '-g', 'openclaw@latest'], getNodeMirrorEnv())
+    logStepDone('install-openclaw-package')
 
+    logStepStart('run-openclaw-onboard')
     sendProgress(event, 'finalizing', 78, '正在执行 openclaw onboard --install-daemon')
     const runtimeAfterInstallCommand = await getRuntimeStatus()
     await runCommand(getCommandPath(runtimeAfterInstallCommand.openclaw, 'openclaw'), ['onboard', '--install-daemon'], getNodeMirrorEnv())
+    logStepDone('run-openclaw-onboard')
 
+    logStepStart('verify-openclaw')
     const runtimeAfterInstall = await getRuntimeStatus()
     if (!runtimeAfterInstall.openclaw.exists) {
       throw new Error('openclaw 命令未成功安装。')
     }
+    logStepDone('verify-openclaw', runtimeAfterInstall.openclaw)
 
     sendProgress(event, 'completed', 100, '安装完成，openclaw 和 daemon 已准备就绪')
     return {
@@ -282,12 +327,14 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     }
   }
   catch (error) {
+    logStepFail('install-openclaw-flow', error)
     throw error
   }
 }
 
 ipcMain.handle('uninstall-openclaw', async (event) => {
   try {
+    logStepStart('uninstall-openclaw')
     const runtime = await getRuntimeStatus()
     if (!runtime.pnpm.exists) {
       throw new Error('未检测到 pnpm，无法执行一键卸载。')
@@ -298,9 +345,11 @@ ipcMain.handle('uninstall-openclaw', async (event) => {
 
     sendProgress(event, 'uninstalling', 75, '如已安装 daemon，请按 openclaw 提示完成停用')
     sendProgress(event, 'uninstalling', 100, '卸载完成')
+    logStepDone('uninstall-openclaw')
     return { success: true }
   } catch (error) {
-    log.error('卸载失败:', error)
+    logStepFail('uninstall-openclaw', error)
+    log.error('Uninstall failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : '未知错误'
@@ -310,11 +359,14 @@ ipcMain.handle('uninstall-openclaw', async (event) => {
 
 ipcMain.handle('launch-openclaw', async () => {
   try {
+    logStepStart('launch-check')
     const runtime = await getRuntimeStatus()
     await runCommand(getCommandPath(runtime.openclaw, 'openclaw'), ['--help'])
+    logStepDone('launch-check')
     return { success: true }
   } catch (error) {
-    log.error('启动失败:', error)
+    logStepFail('launch-check', error)
+    log.error('Launch check failed:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'openclaw 命令不可用'
@@ -336,6 +388,7 @@ function sendProgress(
 }
 
 async function getRuntimeStatus(): Promise<RuntimeStatus> {
+  logStepStart('get-runtime-status')
   const [node, npm, pnpm, openclaw, npmRegistry, pnpmRegistry] = await Promise.all([
     getCommandStatus('node', ['--version']),
     getCommandStatus('npm', ['--version']),
@@ -345,7 +398,7 @@ async function getRuntimeStatus(): Promise<RuntimeStatus> {
     readRegistry('pnpm')
   ])
 
-  return {
+  const runtime = {
     node,
     npm,
     pnpm,
@@ -356,17 +409,20 @@ async function getRuntimeStatus(): Promise<RuntimeStatus> {
     },
     mirrorRecommended: isMirrorRecommended()
   }
+  logStepDone('get-runtime-status', runtime)
+  return runtime
 }
 
 async function installNodeJs(event: Electron.IpcMainInvokeEvent) {
+  logStepStart('install-nodejs')
   const installer = await resolveNodeInstaller()
-  const tempDir = join(os.tmpdir(), 'openclaw-node-installer')
-  fs.mkdirSync(tempDir, { recursive: true })
-  const installerPath = join(tempDir, installer.name)
+  const tempDir = fs.mkdtempSync(join(os.tmpdir(), 'openclaw-node-installer-'))
+  const installerFileName = basename(installer.name)
+  const installerPath = join(tempDir, installerFileName)
 
-  sendProgress(event, 'downloading', 24, `正在下载 ${installer.name}`)
+  sendProgress(event, 'downloading', 24, `正在下载 ${installerFileName}`)
   await downloadFile(installer.url, installerPath, (progress) => {
-    sendProgress(event, 'downloading', 24 + Math.round(progress * 24), `正在下载 ${installer.name}`)
+    sendProgress(event, 'downloading', 24 + Math.round(progress * 24), `正在下载 ${installerFileName}`)
   })
 
   sendProgress(event, 'finalizing', 50, '正在安装 Node.js，可能会触发系统权限确认')
@@ -377,12 +433,15 @@ async function installNodeJs(event: Electron.IpcMainInvokeEvent) {
   if (!installed) {
     throw new Error('Node.js 安装完成后仍未检测到 node 命令。')
   }
+  logStepDone('install-nodejs', { installerPath })
 }
 
 async function upgradeNodeJs(event: Electron.IpcMainInvokeEvent, runtime: RuntimeStatus) {
+  logStepStart('upgrade-nodejs', runtime.node)
   const upgradedWithManager = await tryUpgradeNodeWithManager(event)
 
   if (upgradedWithManager) {
+    logStepDone('upgrade-nodejs', 'manager')
     return
   }
 
@@ -397,6 +456,7 @@ async function upgradeNodeJs(event: Electron.IpcMainInvokeEvent, runtime: Runtim
   if (!runtime.node.path || refreshedRuntime.node.path !== runtime.node.path) {
     log.info('Node.js 已通过官方安装器升级:', refreshedRuntime.node.path, refreshedRuntime.node.version)
   }
+  logStepDone('upgrade-nodejs', refreshedRuntime.node)
 }
 
 async function getCommandStatus(command: string, versionArgs: string[]): Promise<CommandCheckResult> {
@@ -432,14 +492,32 @@ function whichCommand(command: string): Promise<string | null> {
       }
 
       const firstLine = stdout.split(/\r?\n/).find(Boolean)?.trim() || null
-      resolve(firstLine)
+      resolve(normalizeCommandPath(firstLine, command))
     })
   })
 }
 
 function runCommand(command: string, args: string[], extraEnv: Record<string, string> = {}): Promise<string> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const useWindowsShell = shouldUseWindowsShell(command)
+    const spawnCommand = useWindowsShell ? (process.env.ComSpec || 'cmd.exe') : command
+    const spawnArgs = useWindowsShell
+      ? ['/d', '/s', '/c', buildWindowsCommand(command, args)]
+      : args
+    const displayCommand = useWindowsShell
+      ? `${spawnCommand} ${spawnArgs.join(' ')}`
+      : `${spawnCommand} ${spawnArgs.join(' ')}`
+
+    log.info('[COMMAND START]', {
+      command,
+      args,
+      spawnCommand,
+      spawnArgs,
+      useWindowsShell,
+      path: buildRuntimePath(extraEnv.PATH)
+    })
+
+    const child = spawn(spawnCommand, spawnArgs, {
       env: {
         ...process.env,
         ...extraEnv,
@@ -462,10 +540,22 @@ function runCommand(command: string, args: string[], extraEnv: Record<string, st
     child.on('error', reject)
     child.on('close', (code) => {
       if (code === 0) {
+        log.info('[COMMAND DONE]', {
+          command: displayCommand,
+          code,
+          stdout: summarizeOutput(stdout),
+          stderr: summarizeOutput(stderr)
+        })
         resolve(stdout || stderr)
         return
       }
 
+      log.error('[COMMAND FAIL]', {
+        command: displayCommand,
+        code,
+        stdout: summarizeOutput(stdout),
+        stderr: summarizeOutput(stderr)
+      })
       reject(new Error((stderr || stdout || `${command} 执行失败`).trim()))
     })
   })
@@ -479,6 +569,13 @@ function runShellCommand(command: string, extraEnv: Record<string, string> = {})
     const shellArgs = process.platform === 'win32'
       ? ['/d', '/s', '/c', command]
       : ['-lc', command]
+
+    log.info('[SHELL START]', {
+      shellPath,
+      shellArgs,
+      command,
+      path: buildRuntimePath(extraEnv.PATH)
+    })
 
     const child = spawn(shellPath, shellArgs, {
       env: {
@@ -503,10 +600,22 @@ function runShellCommand(command: string, extraEnv: Record<string, string> = {})
     child.on('error', reject)
     child.on('close', (code) => {
       if (code === 0) {
+        log.info('[SHELL DONE]', {
+          command,
+          code,
+          stdout: summarizeOutput(stdout),
+          stderr: summarizeOutput(stderr)
+        })
         resolve(stdout || stderr)
         return
       }
 
+      log.error('[SHELL FAIL]', {
+        command,
+        code,
+        stdout: summarizeOutput(stdout),
+        stderr: summarizeOutput(stderr)
+      })
       reject(new Error((stderr || stdout || `${command} 执行失败`).trim()))
     })
   })
@@ -514,24 +623,50 @@ function runShellCommand(command: string, extraEnv: Record<string, string> = {})
 
 function downloadFile(url: string, destination: string, onProgress?: (progress: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
+    fs.mkdirSync(dirname(destination), { recursive: true })
     const file = fs.createWriteStream(destination)
+    let settled = false
+
+    const fail = (error: Error) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      try {
+        file.destroy()
+      } catch {
+      }
+      fs.rmSync(destination, { force: true })
+      reject(error)
+    }
+
+    file.on('error', (error) => {
+      fail(error)
+    })
 
     https.get(url, {
       headers: {
         'User-Agent': 'Crayfish-Installer'
       }
     }, (response) => {
+      response.on('error', (error) => {
+        fail(error)
+      })
+
       if (response.statusCode && [301, 302, 307, 308].includes(response.statusCode)) {
         const redirectUrl = response.headers.location
         if (redirectUrl) {
-          file.close()
-          downloadFile(redirectUrl, destination, onProgress).then(resolve).catch(reject)
+          response.resume()
+          settled = true
+          file.close(() => {
+            downloadFile(redirectUrl, destination, onProgress).then(resolve).catch(reject)
+          })
           return
         }
       }
 
       if (response.statusCode !== 200) {
-        reject(new Error(`下载安装文件失败: HTTP ${response.statusCode}`))
+        fail(new Error(`下载安装文件失败: HTTP ${response.statusCode}`))
         return
       }
 
@@ -547,18 +682,28 @@ function downloadFile(url: string, destination: string, onProgress?: (progress: 
 
       response.pipe(file)
       file.on('finish', () => {
-        file.close()
-        resolve()
+        if (settled) {
+          return
+        }
+        settled = true
+        file.close((closeError) => {
+          if (closeError) {
+            reject(closeError)
+            return
+          }
+          resolve()
+        })
       })
     }).on('error', (error) => {
-      fs.rmSync(destination, { force: true })
-      reject(error)
+      fail(error)
     })
   })
 }
 
 async function ensureMirrorConfigured() {
+  logStepStart('ensure-mirror-configured')
   if (!isMirrorRecommended()) {
+    logStepDone('ensure-mirror-configured', 'skipped')
     return
   }
 
@@ -573,19 +718,26 @@ async function ensureMirrorConfigured() {
   if (pnpmPath) {
     await runCommand(pnpmPath, ['config', 'set', 'registry', registry], getNodeMirrorEnv())
   }
+  logStepDone('ensure-mirror-configured', { npmPath, pnpmPath, registry })
 }
 
 async function runGlobalCommand(command: string, args: string[], extraEnv: Record<string, string> = {}) {
+  logStepStart('run-global-command', { command, args })
   try {
-    return await runCommand(command, args, extraEnv)
+    const result = await runCommand(command, args, extraEnv)
+    logStepDone('run-global-command', { command, args })
+    return result
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     if (!isPermissionError(message)) {
+      logStepFail('run-global-command', error)
       throw error
     }
 
-    log.warn('检测到权限不足，正在请求系统授权:', command, args.join(' '))
-    return runCommandAsAdministrator(command, args, extraEnv)
+    log.warn('Permission denied, requesting elevation:', command, args.join(' '))
+    const elevatedResult = await runCommandAsAdministrator(command, args, extraEnv)
+    logStepDone('run-global-command', { command, args, elevated: true })
+    return elevatedResult
   }
 }
 
@@ -624,11 +776,11 @@ function getShellCommand(command: string) {
 }
 
 async function getCommandExecutionPath(command: string) {
-  return (await whichCommand(command)) || getShellCommand(command)
+  return normalizeCommandPath((await whichCommand(command)) || getShellCommand(command), command)
 }
 
 function getCommandPath(status: CommandCheckResult, command: string) {
-  return status.path || getShellCommand(command)
+  return normalizeCommandPath(status.path || getShellCommand(command), command)
 }
 
 async function resolveNodeInstaller(): Promise<{ name: string; url: string }> {
@@ -743,6 +895,80 @@ function getKnownCommandPath(command: string): string | null {
   }
 
   return null
+}
+
+function normalizeCommandPath(commandPath: string | null, commandName: string) {
+  if (!commandPath) {
+    return null
+  }
+
+  if (process.platform !== 'win32') {
+    return commandPath
+  }
+
+  const loweredCommandName = commandName.toLowerCase()
+  const prefersScriptShim = ['npm', 'pnpm', 'openclaw'].includes(loweredCommandName)
+
+  const candidates = commandPath.includes('\\') || commandPath.includes('/')
+    ? [
+        `${commandPath}.cmd`,
+        `${commandPath}.exe`,
+        `${commandPath}.bat`,
+        commandPath
+      ]
+    : [
+        getShellCommand(commandName),
+        `${commandPath}.cmd`,
+        `${commandPath}.exe`,
+        `${commandPath}.bat`,
+        commandPath
+      ]
+
+  if (!prefersScriptShim && fs.existsSync(commandPath)) {
+    return commandPath
+  }
+
+  return candidates.find(candidate => {
+    if (!candidate) {
+      return false
+    }
+
+    if (!candidate.includes('\\') && !candidate.includes('/')) {
+      return true
+    }
+
+    return fs.existsSync(candidate)
+  }) || commandPath
+}
+
+function shouldUseWindowsShell(command: string) {
+  if (process.platform !== 'win32') {
+    return false
+  }
+
+  const lowered = command.toLowerCase()
+  return lowered.endsWith('.cmd')
+    || lowered.endsWith('.bat')
+    || lowered.includes('\\npm')
+    || lowered.includes('\\pnpm')
+    || lowered.includes('\\openclaw')
+}
+
+function buildWindowsCommand(command: string, args: string[]) {
+  const quoted = [command, ...args].map(quoteWindowsArgument)
+  return quoted.join(' ')
+}
+
+function quoteWindowsArgument(value: string) {
+  if (value.length === 0) {
+    return '""'
+  }
+
+  if (!/[ \t"]/u.test(value)) {
+    return value
+  }
+
+  return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`
 }
 
 function isNodeVersionSupported(version: string | null) {
@@ -922,7 +1148,7 @@ function getNvmCommandPath(command: string) {
       }
     }
   } catch (error) {
-    log.warn('读取 nvm 目录失败:', error)
+    log.warn('Failed to inspect nvm directory:', error)
   }
 
   return null

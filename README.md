@@ -37,6 +37,12 @@ pnpm electron:dev
 
 # 构建当前系统安装包
 pnpm build
+
+# 构建 Windows x64 安装程序
+pnpm build:win
+
+# 构建 Windows ARM 安装程序
+pnpm build:win:arm64
 ```
 
 ## 项目结构
@@ -124,6 +130,8 @@ pnpm preview
 ## 交付建议
 
 - macOS 和 Windows 的安装包建议分别在对应系统或 CI 环境中构建
+- Windows 默认应优先发布 `x64` 安装程序，`arm64` 仅用于 ARM Windows 设备
+- Windows 产物为 NSIS 安装程序，支持安装目录选择、桌面快捷方式、开始菜单和卸载入口
 - 正式发布前建议补充 Node.js 缺失时的下载引导页和平台化安装器
 - 继续完善 daemon 卸载与状态检测，避免只卸掉 CLI 但 daemon 仍残留
 - 如果后续要覆盖非技术用户，优先补充安装失败时的可恢复提示，而不是继续增加技术细节

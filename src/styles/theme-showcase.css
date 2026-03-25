@@ -1,0 +1,439 @@
+.theme-demo-shell {
+  min-height: 100vh;
+  padding: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.95), rgba(243, 247, 255, 0.94)),
+    linear-gradient(180deg, #edf3fb 0%, #f5f8fd 100%);
+}
+
+.theme-demo-frame {
+  width: 100%;
+  min-height: calc(100vh - 56px);
+  display: flex;
+  overflow: hidden;
+  border-radius: 30px;
+  border: 1px solid rgba(214, 223, 238, 0.85);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 28px 70px rgba(100, 116, 139, 0.16);
+}
+
+.theme-demo-sidebar {
+  width: 354px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 46px 48px 38px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f6f9fe 100%);
+  border-right: 1px solid rgba(220, 228, 240, 0.95);
+}
+
+.theme-demo-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 66px;
+}
+
+.theme-demo-brand-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: #182139;
+  color: #fff;
+  font-size: 1.85rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.theme-demo-brand-name {
+  color: #1c2640;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.theme-demo-steps {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.theme-demo-step {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+
+.theme-demo-step-line {
+  position: absolute;
+  top: 30px;
+  left: 16px;
+  width: 2px;
+  height: calc(100% + 34px);
+  background: #d9e2f0;
+}
+
+.theme-demo-step-badge {
+  position: relative;
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #ced8e8;
+  background: #fff;
+  color: #8b9bb7;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.theme-demo-step.is-active .theme-demo-step-badge {
+  border-color: #182139;
+  background: #182139;
+  color: #fff;
+  box-shadow: 0 0 0 8px #f8fbff;
+}
+
+.theme-demo-step-copy {
+  padding-left: 22px;
+}
+
+.theme-demo-step-title {
+  color: #63748f;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.theme-demo-step-text {
+  margin-top: 6px;
+  color: #8ca0bd;
+  font-size: 0.94rem;
+  line-height: 1.4;
+}
+
+.theme-demo-step.is-active .theme-demo-step-title {
+  color: #1d2741;
+}
+
+.theme-demo-step.is-active .theme-demo-step-text {
+  color: #647799;
+}
+
+.theme-demo-version {
+  margin-top: auto;
+  padding-top: 34px;
+  color: #9aabc4;
+  font-size: 0.95rem;
+}
+
+.theme-demo-main {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.theme-demo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 38px 46px 34px;
+  border-bottom: 1px solid rgba(225, 232, 242, 0.95);
+}
+
+.theme-demo-header h1 {
+  color: #1a233d;
+  font-size: clamp(2rem, 2.8vw, 3.15rem);
+  line-height: 1.08;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.theme-demo-language {
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #8ba0bc;
+  font-size: 0.98rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.theme-demo-language-icon {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-demo-language-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-demo-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 42px 46px 28px;
+}
+
+.theme-demo-intro {
+  margin-bottom: 24px;
+  color: #4d607d;
+  font-size: 1.02rem;
+  line-height: 1.7;
+}
+
+.theme-demo-card {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  padding: 34px 38px;
+  border: 1px solid #dbe4f1;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #f8fbff 0%, #f9fbfe 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.theme-demo-card h2 {
+  margin-bottom: 28px;
+  color: #1d2741;
+  font-size: 1.18rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.theme-demo-card h3 {
+  margin: 34px 0 14px;
+  color: #1d2741;
+  font-size: 1.06rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.theme-demo-card p {
+  color: #344767;
+  font-size: 1rem;
+  line-height: 1.75;
+}
+
+.theme-demo-updated {
+  margin-top: 34px;
+  color: #6f84a3;
+  font-size: 0.94rem;
+  font-style: italic;
+}
+
+.theme-demo-checkbox {
+  margin-top: 28px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  color: #314564;
+  font-size: 1rem;
+  line-height: 1.6;
+  cursor: pointer;
+}
+
+.theme-demo-checkbox input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-demo-checkbox-mark {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  border-radius: 7px;
+  border: 2px solid #cad6e8;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.theme-demo-checkbox-mark svg {
+  width: 15px;
+  height: 15px;
+  stroke: #fff;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transform: scale(0.85);
+  transition: all 0.2s ease;
+}
+
+.theme-demo-checkbox input:checked + .theme-demo-checkbox-mark {
+  border-color: #182139;
+  background: #182139;
+}
+
+.theme-demo-checkbox input:checked + .theme-demo-checkbox-mark svg {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.theme-demo-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 28px 46px 34px;
+  border-top: 1px solid rgba(225, 232, 242, 0.95);
+  background: linear-gradient(180deg, #fbfdff 0%, #f5f8fd 100%);
+}
+
+.theme-demo-footer-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.theme-demo-link-btn,
+.theme-demo-secondary-btn,
+.theme-demo-primary-btn {
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.theme-demo-link-btn {
+  border: none;
+  background: transparent;
+  color: #445978;
+  padding: 12px 0;
+  cursor: pointer;
+}
+
+.theme-demo-secondary-btn,
+.theme-demo-primary-btn {
+  min-width: 112px;
+  padding: 14px 24px;
+}
+
+.theme-demo-secondary-btn {
+  border: 1px solid #d6dfec;
+  background: #fff;
+  color: #485b79;
+  box-shadow: 0 10px 18px rgba(160, 176, 199, 0.12);
+  cursor: pointer;
+}
+
+.theme-demo-primary-btn {
+  border: 1px solid transparent;
+  background: #1a233d;
+  color: #fff;
+  box-shadow: 0 18px 30px rgba(26, 35, 61, 0.18);
+  cursor: pointer;
+}
+
+.theme-demo-primary-btn:disabled {
+  background: #c9d5e6;
+  color: #fff;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.theme-demo-secondary-btn:hover,
+.theme-demo-primary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+  .theme-demo-shell {
+    padding: 16px;
+  }
+
+  .theme-demo-frame {
+    min-height: auto;
+    flex-direction: column;
+  }
+
+  .theme-demo-sidebar {
+    width: 100%;
+    padding: 28px 26px;
+    border-right: none;
+    border-bottom: 1px solid rgba(220, 228, 240, 0.95);
+  }
+
+  .theme-demo-brand {
+    margin-bottom: 34px;
+  }
+
+  .theme-demo-steps {
+    gap: 20px;
+  }
+
+  .theme-demo-step-line {
+    display: none;
+  }
+
+  .theme-demo-header,
+  .theme-demo-content,
+  .theme-demo-footer {
+    padding-left: 26px;
+    padding-right: 26px;
+  }
+}
+
+@media (max-width: 720px) {
+  .theme-demo-shell {
+    padding: 12px;
+  }
+
+  .theme-demo-frame {
+    border-radius: 22px;
+  }
+
+  .theme-demo-sidebar {
+    padding: 22px 20px;
+  }
+
+  .theme-demo-header {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 24px 20px 22px;
+  }
+
+  .theme-demo-content {
+    padding: 24px 20px;
+  }
+
+  .theme-demo-card {
+    padding: 24px 20px;
+  }
+
+  .theme-demo-footer {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 20px;
+  }
+
+  .theme-demo-footer-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .theme-demo-secondary-btn,
+  .theme-demo-primary-btn {
+    width: 100%;
+  }
+}
