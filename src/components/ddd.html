@@ -1,0 +1,254 @@
+<body class="bg-surface-50 min-h-screen w-full flex items-center justify-center p-4 m-0 text-slate-800">
+
+    <!-- Main Container -->
+    <main id="app-container" class="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 transition-all duration-300">
+        
+        <!-- Header Section -->
+        <header id="header" class="px-8 pt-8 pb-4 text-center">
+            <div class="w-16 h-16 mx-auto bg-brand-50 rounded-2xl flex items-center justify-center mb-4 border border-brand-100 shadow-sm">
+                <i class="text-3xl text-brand-600" data-fa-i2svg=""><svg class="svg-inline--fa fa-cube" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="cube" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M234.5 5.7c13.9-5 29.1-5 43.1 0l192 68.6C495 83.4 512 107.5 512 134.6V377.4c0 27-17 51.2-42.5 60.3l-192 68.6c-13.9 5-29.1 5-43.1 0l-192-68.6C17 428.6 0 404.5 0 377.4V134.6c0-27 17-51.2 42.5-60.3l192-68.6zM256 66L82.3 128 256 190l173.7-62L256 66zm32 368.6l160-57.1v-188L288 246.6v188z"></path></svg></i>
+            </div>
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">OpenClaw</h1>
+            <p class="text-sm text-slate-500">智能环境配置向导</p>
+        </header>
+
+        <!-- Dynamic State Area -->
+        <section id="state-area" class="px-8 py-4 min-h-[160px] flex flex-col justify-center relative">
+            
+            <!-- State 1: Default (Uninstalled) -->
+            <div id="state-default" class="text-center fade-in block">
+                <div class="space-y-3 mb-6">
+                    <div class="flex items-center justify-center text-sm text-slate-600 gap-2">
+                        <i class="text-amber-400" data-fa-i2svg=""><svg class="svg-inline--fa fa-bolt" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="bolt" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M349.4 44.6c5.9-13.7 1.5-29.7-10.6-38.5s-28.6-8-39.9 1.8l-256 224c-10 8.8-13.6 22.9-8.9 35.3S50.7 288 64 288H175.5L98.6 467.4c-5.9 13.7-1.5 29.7 10.6 38.5s28.6 8 39.9-1.8l256-224c10-8.8 13.6-22.9 8.9-35.3s-16.6-20.7-30-20.7H272.5L349.4 44.6z"></path></svg></i> 无需命令行
+                    </div>
+                    <div class="flex items-center justify-center text-sm text-slate-600 gap-2">
+                        <i class="text-brand-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-wand-magic-sparkles" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="wand-magic-sparkles" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" data-fa-i2svg=""><path fill="currentColor" d="M234.7 42.7L197 56.8c-3 1.1-5 4-5 7.2s2 6.1 5 7.2l37.7 14.1L248.8 123c1.1 3 4 5 7.2 5s6.1-2 7.2-5l14.1-37.7L315 71.2c3-1.1 5-4 5-7.2s-2-6.1-5-7.2L277.3 42.7 263.2 5c-1.1-3-4-5-7.2-5s-6.1 2-7.2 5L234.7 42.7zM46.1 395.4c-18.7 18.7-18.7 49.1 0 67.9l34.6 34.6c18.7 18.7 49.1 18.7 67.9 0L529.9 116.5c18.7-18.7 18.7-49.1 0-67.9L495.3 14.1c-18.7-18.7-49.1-18.7-67.9 0L46.1 395.4zM484.6 82.6l-105 105-23.3-23.3 105-105 23.3 23.3zM7.5 117.2C3 118.9 0 123.2 0 128s3 9.1 7.5 10.8L64 160l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L128 160l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L128 96 106.8 39.5C105.1 35 100.8 32 96 32s-9.1 3-10.8 7.5L64 96 7.5 117.2zm352 256c-4.5 1.7-7.5 6-7.5 10.8s3 9.1 7.5 10.8L416 416l21.2 56.5c1.7 4.5 6 7.5 10.8 7.5s9.1-3 10.8-7.5L480 416l56.5-21.2c4.5-1.7 7.5-6 7.5-10.8s-3-9.1-7.5-10.8L480 352l-21.2-56.5c-1.7-4.5-6-7.5-10.8-7.5s-9.1 3-10.8 7.5L416 352l-56.5 21.2z"></path></svg></i> 自动配置环境
+                    </div>
+                    <div class="flex items-center justify-center text-sm text-slate-600 gap-2">
+                        <i class="text-blue-400" data-fa-i2svg=""><svg class="svg-inline--fa fa-clock" aria-hidden="true" focusable="false" data-prefix="far" data-icon="clock" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M464 256A208 208 0 1 1 48 256a208 208 0 1 1 416 0zM0 256a256 256 0 1 0 512 0A256 256 0 1 0 0 256zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"></path></svg></i> 约 1-3 分钟
+                    </div>
+                </div>
+            </div>
+
+            <!-- State 2: Installing -->
+            <div id="state-installing" class="text-center fade-in hidden">
+                <h2 class="text-base font-semibold text-slate-800 mb-4">正在为你准备 OpenClaw...</h2>
+                
+                <!-- Progress Bar -->
+                <div class="w-full bg-slate-100 rounded-full h-3 mb-3 overflow-hidden shadow-inner relative">
+                    <div class="bg-brand-500 h-3 rounded-full progress-bar-stripes transition-all duration-300 w-[65%] shadow-[0_0_10px_rgba(20,184,166,0.5)]"></div>
+                </div>
+                
+                <div class="flex justify-between items-center text-xs font-medium">
+                    <span class="text-brand-600 animate-pulse">正在下载必要组件...</span>
+                    <span class="text-slate-500">65%</span>
+                </div>
+            </div>
+
+            <!-- State 3: Failed -->
+            <div id="state-failed" class="text-center fade-in hidden">
+                <div class="w-12 h-12 mx-auto bg-red-50 rounded-full flex items-center justify-center mb-3">
+                    <i class="text-xl text-red-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-xmark" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="xmark" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z"></path></svg></i>
+                </div>
+                <h2 class="text-base font-semibold text-slate-800 mb-2">安装遇到问题</h2>
+                
+                <div class="bg-red-50/50 rounded-lg p-4 border border-red-100 text-left mb-4">
+                    <p class="text-sm font-medium text-red-800 mb-1"><i class="mr-1.5 text-red-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-exclamation" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-exclamation" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 512A256 256 0 1 0 256 0a256 256 0 1 0 0 512zm0-384c13.3 0 24 10.7 24 24V264c0 13.3-10.7 24-24 24s-24-10.7-24-24V152c0-13.3 10.7-24 24-24zM224 352a32 32 0 1 1 64 0 32 32 0 1 1 -64 0z"></path></svg></i>网络连接不稳定</p>
+                    <p class="text-xs text-slate-600 mb-2">我们已自动重试 2 次，但未能解决。</p>
+                    <p class="text-xs text-slate-500">请检查网络后点击下方按钮重试。</p>
+                </div>
+            </div>
+
+            <!-- State 4: Success -->
+            <div id="state-success" class="text-center fade-in hidden">
+                <div class="w-16 h-16 mx-auto bg-green-50 rounded-full flex items-center justify-center mb-4">
+                    <i class="text-2xl text-green-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                </div>
+                <h2 class="text-lg font-bold text-slate-900 mb-2">安装完成！</h2>
+                <p class="text-sm text-slate-500 mb-4">OpenClaw 已准备就绪，可以开始使用了。</p>
+            </div>
+
+        </section>
+
+        <!-- Details Section (Collapsible) -->
+        <section id="details-section" class="px-8 py-2 border-t border-slate-100 bg-slate-50/50">
+            <button onclick="toggleDetails()" class="w-full flex items-center justify-center gap-2 text-xs text-slate-500 hover:text-slate-700 py-2 transition-colors">
+                <span>查看安装详情</span>
+                <i id="details-icon" class="transition-transform duration-200 rotate-180" data-fa-i2svg=""><svg class="svg-inline--fa fa-chevron-down" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-down" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg></i>
+            </button>
+            
+            <div id="details-content" class="overflow-hidden transition-all duration-300 text-xs text-slate-600 space-y-2 py-3">
+                <!-- Default/Success Details -->
+                <div id="details-normal" class="block space-y-2">
+                    <div class="flex items-center gap-2"><i class="text-green-500 w-4" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i> Node.js 环境就绪</div>
+                    <div class="flex items-center gap-2"><i class="text-green-500 w-4" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i> 核心依赖已配置</div>
+                    <div class="flex items-center gap-2 text-slate-400"><i class="text-brand-500 w-4" data-fa-i2svg=""><svg class="svg-inline--fa fa-spinner fa-spin" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="spinner" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M304 48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zm0 416a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM48 304a48 48 0 1 0 0-96 48 48 0 1 0 0 96zm464-48a48 48 0 1 0 -96 0 48 48 0 1 0 96 0zM142.9 437A48 48 0 1 0 75 369.1 48 48 0 1 0 142.9 437zm0-294.2A48 48 0 1 0 75 75a48 48 0 1 0 67.9 67.9zM369.1 437A48 48 0 1 0 437 369.1 48 48 0 1 0 369.1 437z"></path></svg></i> OpenClaw 准备中</div>
+                </div>
+                
+                <!-- Failed Details -->
+                <div id="details-error" class="hidden space-y-2 bg-slate-100 p-3 rounded border border-slate-200 font-mono">
+                    <div class="text-red-500">❌ 组件下载超时</div>
+                    <div class="text-slate-500 mt-1">Error: Network timeout (ETIMEDOUT)</div>
+                    <div class="text-slate-400 mt-2">&gt; GET https://registry.npm...</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Action Footer -->
+        <footer id="action-footer" class="p-6 bg-slate-50 border-t border-slate-200">
+            <!-- Default Button -->
+            <button id="btn-default" onclick="switchState('installing')" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium shadow-sm transition-all flex items-center justify-center gap-2 group">
+                <i class="group-hover:translate-x-1 transition-transform" data-fa-i2svg=""><svg class="svg-inline--fa fa-rocket" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rocket" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M156.6 384.9L125.7 354c-8.5-8.5-11.5-20.8-7.7-32.2c3-8.9 7-20.5 11.8-33.8L24 288c-8.6 0-16.6-4.6-20.9-12.1s-4.2-16.7 .2-24.1l52.5-88.5c13-21.9 36.5-35.3 61.9-35.3l82.3 0c2.4-4 4.8-7.7 7.2-11.3C289.1-4.1 411.1-8.1 483.9 5.3c11.6 2.1 20.6 11.2 22.8 22.8c13.4 72.9 9.3 194.8-111.4 276.7c-3.5 2.4-7.3 4.8-11.3 7.2v82.3c0 25.4-13.4 49-35.3 61.9l-88.5 52.5c-7.4 4.4-16.6 4.5-24.1 .2s-12.1-12.2-12.1-20.9V380.8c-14.1 4.9-26.4 8.9-35.7 11.9c-11.2 3.6-23.4 .5-31.8-7.8zM384 168a40 40 0 1 0 0-80 40 40 0 1 0 0 80z"></path></svg></i> 立即安装
+            </button>
+
+            <!-- Installing Button -->
+            <button id="btn-installing" class="w-full py-3 px-4 bg-slate-200 text-slate-400 rounded-xl font-medium cursor-not-allowed hidden flex items-center justify-center gap-2">
+                <i data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-notch fa-spin" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-notch" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M222.7 32.1c5 16.9-4.6 34.8-21.5 39.8C121.8 95.6 64 169.1 64 256c0 106 86 192 192 192s192-86 192-192c0-86.9-57.8-160.4-137.1-184.1c-16.9-5-26.6-22.9-21.5-39.8s22.9-26.6 39.8-21.5C434.9 42.1 512 140 512 256c0 141.4-114.6 256-256 256S0 397.4 0 256C0 140 77.1 42.1 182.9 10.6c16.9-5 34.8 4.6 39.8 21.5z"></path></svg></i> 安装中...
+            </button>
+
+            <!-- Failed Buttons -->
+            <div id="btn-failed" class="w-full hidden space-y-3">
+                <button onclick="switchState('installing')" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-medium shadow-sm transition-all flex items-center justify-center gap-2">
+                    <i data-fa-i2svg=""><svg class="svg-inline--fa fa-rotate-right" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rotate-right" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M463.5 224H472c13.3 0 24-10.7 24-24V72c0-9.7-5.8-18.5-14.8-22.2s-19.3-1.7-26.2 5.2L413.4 96.6c-87.6-86.5-228.7-86.2-315.8 1c-87.5 87.5-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3c62.2-62.2 162.7-62.5 225.3-1L327 183c-6.9 6.9-8.9 17.2-5.2 26.2s12.5 14.8 22.2 14.8H463.5z"></path></svg></i> 再试一次
+                </button>
+                <button class="w-full py-2 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-medium transition-all text-sm flex items-center justify-center gap-2">
+                    <i data-fa-i2svg=""><svg class="svg-inline--fa fa-copy" aria-hidden="true" focusable="false" data-prefix="far" data-icon="copy" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M448 384H256c-35.3 0-64-28.7-64-64V64c0-35.3 28.7-64 64-64H396.1c12.7 0 24.9 5.1 33.9 14.1l67.9 67.9c9 9 14.1 21.2 14.1 33.9V320c0 35.3-28.7 64-64 64zM64 128h96v48H64c-8.8 0-16 7.2-16 16V448c0 8.8 7.2 16 16 16H256c8.8 0 16-7.2 16-16V416h48v32c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V192c0-35.3 28.7-64 64-64z"></path></svg></i> 复制错误信息
+                </button>
+            </div>
+
+            <!-- Success Buttons -->
+            <div id="btn-success" class="w-full hidden space-y-3">
+                <button class="w-full py-3 px-4 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium shadow-sm shadow-brand-500/30 transition-all flex items-center justify-center gap-2 group">
+                    <i class="group-hover:-translate-y-1 transition-transform" data-fa-i2svg=""><svg class="svg-inline--fa fa-rocket" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="rocket" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M156.6 384.9L125.7 354c-8.5-8.5-11.5-20.8-7.7-32.2c3-8.9 7-20.5 11.8-33.8L24 288c-8.6 0-16.6-4.6-20.9-12.1s-4.2-16.7 .2-24.1l52.5-88.5c13-21.9 36.5-35.3 61.9-35.3l82.3 0c2.4-4 4.8-7.7 7.2-11.3C289.1-4.1 411.1-8.1 483.9 5.3c11.6 2.1 20.6 11.2 22.8 22.8c13.4 72.9 9.3 194.8-111.4 276.7c-3.5 2.4-7.3 4.8-11.3 7.2v82.3c0 25.4-13.4 49-35.3 61.9l-88.5 52.5c-7.4 4.4-16.6 4.5-24.1 .2s-12.1-12.2-12.1-20.9V380.8c-14.1 4.9-26.4 8.9-35.7 11.9c-11.2 3.6-23.4 .5-31.8-7.8zM384 168a40 40 0 1 0 0-80 40 40 0 1 0 0 80z"></path></svg></i> 启动 OpenClaw
+                </button>
+                <button onclick="switchState('default')" class="w-full py-2 px-4 text-slate-500 hover:text-slate-700 font-medium transition-all text-sm">
+                    重新安装
+                </button>
+            </div>
+        </footer>
+
+    </main>
+
+    <!-- Demo Controls (For simulation only) -->
+    <div class="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-slate-200 text-xs flex gap-2 z-50">
+        <button onclick="switchState('default')" class="px-3 py-1 bg-slate-100 rounded hover:bg-slate-200">默认</button>
+        <button onclick="switchState('installing')" class="px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">安装中</button>
+        <button onclick="switchState('failed')" class="px-3 py-1 bg-red-50 text-red-600 rounded hover:bg-red-100">失败</button>
+        <button onclick="switchState('success')" class="px-3 py-1 bg-green-50 text-green-600 rounded hover:bg-green-100">成功</button>
+    </div>
+
+    <script>
+        function toggleDetails() {
+            const content = document.getElementById('details-content');
+            const icon = document.getElementById('details-icon');
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        function switchState(state) {
+            // Hide all states
+            ['default', 'installing', 'failed', 'success'].forEach(s => {
+                document.getElementById(`state-${s}`).classList.add('hidden');
+                document.getElementById(`btn-${s}`).classList.add('hidden');
+            });
+
+            // Show target state
+            document.getElementById(`state-${state}`).classList.remove('hidden');
+            document.getElementById(`btn-${state}`).classList.remove('hidden');
+
+            // Handle details content based on state
+            const detailsNormal = document.getElementById('details-normal');
+            const detailsError = document.getElementById('details-error');
+            
+            if (state === 'failed') {
+                detailsNormal.classList.add('hidden');
+                detailsError.classList.remove('hidden');
+                document.getElementById('details-content').classList.remove('hidden');
+                document.getElementById('details-icon').classList.add('rotate-180');
+            } else {
+                detailsNormal.classList.remove('hidden');
+                detailsError.classList.add('hidden');
+                if (state === 'default') {
+                    document.getElementById('details-content').classList.add('hidden');
+                    document.getElementById('details-icon').classList.remove('rotate-180');
+                }
+            }
+        }
+    </script>
+
+  <script>
+    (function() {
+      function blockEvent(e) {
+        if (!e) return false;
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return false;
+      }
+
+      // Block all anchor navigations (including http(s), mailto, tel, hash, fragments)
+      document.addEventListener('click', function(e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        return blockEvent(e);
+      }, true);
+
+      // Neutralize programmatic navigation attempts
+      try { window.open = function() { return null }; } catch (_) {}
+      try {
+        var noop = function(){};
+        history.pushState = noop;
+        history.replaceState = noop;
+      } catch (_) {}
+      try {
+        if (window.location) {
+          window.location.assign = function(){};
+          window.location.replace = function(){};
+        }
+      } catch (_) {}
+    })();
+  </script>
+<script>
+(function() {
+  function _uxpResizeCharts() {
+    if (window.Plotly) {
+      document.querySelectorAll('.plot-container.plotly').forEach(function(pc) {
+        var gd = pc.parentElement;
+        if (!gd) return;
+        var rect = gd.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        try { window.Plotly.relayout(gd, { width: Math.round(rect.width), height: Math.round(rect.height) }); } catch(e) {}
+      });
+    }
+    if (window.ApexCharts && window.Apex && window.Apex._chartInstances) {
+      window.Apex._chartInstances.forEach(function(inst) {
+        try { (inst.chart || inst).updateOptions({}, false, false); } catch(e) {}
+      });
+    }
+    if (window.Chart) {
+      try { Object.values(window.Chart.instances || {}).forEach(function(c) { c.resize(); }); } catch(e) {}
+    }
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() { _uxpResizeCharts(); setTimeout(_uxpResizeCharts, 500); }, 300);
+    try {
+      var _lastW = 0, _lastH = 0, _timer = 0;
+      new ResizeObserver(function() {
+        var w = document.documentElement.clientWidth;
+        var h = document.documentElement.clientHeight;
+        if (w === _lastW && h === _lastH) return;
+        _lastW = w; _lastH = h;
+        clearTimeout(_timer);
+        _timer = setTimeout(_uxpResizeCharts, 150);
+      }).observe(document.documentElement);
+    } catch(e) {}
+  });
+})();
+</script>
+</body>

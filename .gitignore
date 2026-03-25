@@ -1,0 +1,14 @@
+.idea
+node_modules
+dist
+dist-electron
+coverage
+*.log
+*.env
+.DS_Store
+.vscode
+*.iml
+*.suo
+*.pid
+*.pid.lock
+release
