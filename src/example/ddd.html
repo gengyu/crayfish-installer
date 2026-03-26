@@ -1,0 +1,315 @@
+<body class="bg-brand-50 min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <div id="installer-container" class="bg-white w-full max-w-[1000px] rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-brand-100">
+        
+        <!-- Sidebar Navigation -->
+        <div id="sidebar" class="w-full md:w-64 bg-brand-50 p-6 md:p-8 border-b md:border-b-0 md:border-r border-brand-200 flex flex-col">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-8 h-8 rounded-lg bg-brand-900 flex items-center justify-center text-white font-bold text-sm">
+                    S
+                </div>
+                <span class="font-bold text-brand-900 text-lg">SoftwarePro</span>
+            </div>
+
+            <nav class="flex-1">
+                <ul class="space-y-6">
+                    <!-- Completed Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-900"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-900 text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-semibold text-brand-900">License Agreement</p>
+                            <p class="text-xs text-brand-500 mt-1">Review terms &amp; conditions</p>
+                        </div>
+                    </li>
+
+                    <!-- Active Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-200"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-900 text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            2
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-bold text-brand-900">Installation Settings</p>
+                            <p class="text-xs text-brand-500 mt-1">Configure preferences</p>
+                        </div>
+                    </li>
+
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-200"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-brand-300 text-brand-400 text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            3
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-brand-500">Installation Progress</p>
+                            <p class="text-xs text-brand-400 mt-1">Installing files</p>
+                        </div>
+                    </li>
+
+                    <li class="relative flex items-start group">
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-brand-300 text-brand-400 text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            4
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-brand-500">Success</p>
+                            <p class="text-xs text-brand-400 mt-1">Ready to use</p>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="mt-auto pt-8 text-xs text-brand-400">
+                v2.4.1 build 8920
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="flex-1 flex flex-col bg-white">
+            
+            <!-- Header -->
+            <div class="px-8 py-6 border-b border-brand-100 flex justify-between items-center bg-white">
+                <div>
+                    <h1 class="text-xl font-bold text-brand-900">Installation Settings</h1>
+                    <p class="text-sm text-brand-500 mt-1">Customize your installation preferences</p>
+                </div>
+                <button class="text-brand-400 hover:text-brand-600 transition-colors">
+                    <i class="mr-2" data-fa-i2svg=""><svg class="svg-inline--fa fa-language" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="language" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" data-fa-i2svg=""><path fill="currentColor" d="M0 128C0 92.7 28.7 64 64 64H256h48 16H576c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H320 304 256 64c-35.3 0-64-28.7-64-64V128zm320 0V384H576V128H320zM178.3 175.9c-3.2-7.2-10.4-11.9-18.3-11.9s-15.1 4.7-18.3 11.9l-64 144c-4.5 10.1 .1 21.9 10.2 26.4s21.9-.1 26.4-10.2l8.9-20.1h73.6l8.9 20.1c4.5 10.1 16.3 14.6 26.4 10.2s14.6-16.3 10.2-26.4l-64-144zM160 233.2L179 276H141l19-42.8zM448 164c11 0 20 9 20 20v4h44 16c11 0 20 9 20 20s-9 20-20 20h-2l-1.6 4.5c-8.9 24.4-22.4 46.6-39.6 65.4c.9 .6 1.8 1.1 2.7 1.6l18.9 11.3c9.5 5.7 12.5 18 6.9 27.4s-18 12.5-27.4 6.9l-18.9-11.3c-4.5-2.7-8.8-5.5-13.1-8.5c-10.6 7.5-21.9 14-34 19.4l-3.6 1.6c-10.1 4.5-21.9-.1-26.4-10.2s.1-21.9 10.2-26.4l3.6-1.6c6.4-2.9 12.6-6.1 18.5-9.8l-12.2-12.2c-7.8-7.8-7.8-20.5 0-28.3s20.5-7.8 28.3 0l14.6 14.6 .5 .5c12.4-13.1 22.5-28.3 29.8-45H448 376c-11 0-20-9-20-20s9-20 20-20h52v-4c0-11 9-20 20-20z"></path></svg></i>English
+                </button>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 p-8 flex flex-col overflow-y-auto">
+                
+                <form id="installation-form" class="space-y-8">
+                    
+                    <!-- Install Location Section -->
+                    <div id="install-location-section" class="space-y-4">
+                        <h3 class="text-base font-semibold text-brand-900 flex items-center gap-2">
+                            <i class="text-brand-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-folder-open" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="folder-open" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" data-fa-i2svg=""><path fill="currentColor" d="M88.7 223.8L0 375.8V96C0 60.7 28.7 32 64 32H181.5c17 0 33.3 6.7 45.3 18.7l26.5 26.5c12 12 28.3 18.7 45.3 18.7H416c35.3 0 64 28.7 64 64v32H144c-22.8 0-43.8 12.1-55.3 31.8zm27.6 16.1C122.1 230 132.6 224 144 224H544c11.5 0 22 6.1 27.7 16.1s5.7 22.2-.1 32.1l-112 192C453.9 474 443.4 480 432 480H32c-11.5 0-22-6.1-27.7-16.1s-5.7-22.2 .1-32.1l112-192z"></path></svg></i> Install Location
+                        </h3>
+                        
+                        <div class="bg-brand-50 p-4 rounded-lg border border-brand-200">
+                            <label class="block text-sm font-medium text-brand-700 mb-2">Destination Folder</label>
+                            <div class="flex gap-2">
+                                <input type="text" value="C:\Program Files\SoftwarePro" class="flex-1 bg-white border border-brand-300 rounded-md px-3 py-2 text-sm text-brand-800 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-all" readonly="">
+                                <button type="button" class="px-4 py-2 bg-white border border-brand-300 rounded-md text-sm font-medium text-brand-700 hover:bg-brand-50 hover:text-brand-900 transition-colors shadow-sm">
+                                    Browse...
+                                </button>
+                            </div>
+                            
+                            <!-- Disk Space Summary -->
+                            <div class="mt-4 flex flex-col sm:flex-row gap-4 sm:gap-8 text-sm border-t border-brand-200 pt-3">
+                                <div class="flex items-center gap-2">
+                                    <i class="text-brand-400" data-fa-i2svg=""><svg class="svg-inline--fa fa-hard-drive" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hard-drive" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M0 96C0 60.7 28.7 32 64 32H448c35.3 0 64 28.7 64 64V280.4c-17-15.2-39.4-24.4-64-24.4H64c-24.6 0-47 9.2-64 24.4V96zM64 288H448c35.3 0 64 28.7 64 64v64c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V352c0-35.3 28.7-64 64-64zM320 416a32 32 0 1 0 0-64 32 32 0 1 0 0 64zm128-32a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"></path></svg></i>
+                                    <span class="text-brand-600">Space required:</span>
+                                    <span class="font-semibold text-brand-900">1.2 GB</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="text-brand-400" data-fa-i2svg=""><svg class="svg-inline--fa fa-server" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="server" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M64 32C28.7 32 0 60.7 0 96v64c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V96c0-35.3-28.7-64-64-64H64zm280 72a24 24 0 1 1 0 48 24 24 0 1 1 0-48zm48 24a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM64 288c-35.3 0-64 28.7-64 64v64c0 35.3 28.7 64 64 64H448c35.3 0 64-28.7 64-64V352c0-35.3-28.7-64-64-64H64zm280 72a24 24 0 1 1 0 48 24 24 0 1 1 0-48zm56 24a24 24 0 1 1 48 0 24 24 0 1 1 -48 0z"></path></svg></i>
+                                    <span class="text-brand-600">Space available:</span>
+                                    <span class="font-semibold text-green-600">45.8 GB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Installation Scope -->
+                    <div id="install-scope-section" class="space-y-4">
+                        <h3 class="text-base font-semibold text-brand-900 flex items-center gap-2">
+                            <i class="text-brand-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-users" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="users" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" data-fa-i2svg=""><path fill="currentColor" d="M144 0a80 80 0 1 1 0 160A80 80 0 1 1 144 0zM512 0a80 80 0 1 1 0 160A80 80 0 1 1 512 0zM0 298.7C0 239.8 47.8 192 106.7 192h42.7c15.9 0 31 3.5 44.6 9.7c-1.3 7.2-1.9 14.7-1.9 22.3c0 38.2 16.8 72.5 43.3 96c-.2 0-.4 0-.7 0H21.3C9.6 320 0 310.4 0 298.7zM405.3 320c-.2 0-.4 0-.7 0c26.6-23.5 43.3-57.8 43.3-96c0-7.6-.7-15-1.9-22.3c13.6-6.3 28.7-9.7 44.6-9.7h42.7C592.2 192 640 239.8 640 298.7c0 11.8-9.6 21.3-21.3 21.3H405.3zM224 224a96 96 0 1 1 192 0 96 96 0 1 1 -192 0zM128 485.3C128 411.7 187.7 352 261.3 352H378.7C452.3 352 512 411.7 512 485.3c0 14.7-11.9 26.7-26.7 26.7H154.7c-14.7 0-26.7-11.9-26.7-26.7z"></path></svg></i> Installation Scope
+                        </h3>
+                        
+                        <div class="space-y-3">
+                            <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-brand-50 transition-colors border-brand-500 bg-brand-50">
+                                <input type="radio" name="install_scope" value="current_user" class="custom-radio" checked="">
+                                <div>
+                                    <p class="text-sm font-medium text-brand-900">Install for me only</p>
+                                    <p class="text-xs text-brand-500">Installs only for the current user (John Doe)</p>
+                                </div>
+                            </label>
+                            
+                            <label class="flex items-center gap-3 p-3 border border-brand-200 rounded-lg cursor-pointer hover:bg-brand-50 transition-colors">
+                                <input type="radio" name="install_scope" value="all_users" class="custom-radio">
+                                <div>
+                                    <p class="text-sm font-medium text-brand-900">Install for all users</p>
+                                    <p class="text-xs text-brand-500">Requires administrative privileges</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Optional Components & Shortcuts -->
+                    <div id="additional-options-section" class="space-y-4">
+                        <h3 class="text-base font-semibold text-brand-900 flex items-center gap-2">
+                            <i class="text-brand-500" data-fa-i2svg=""><svg class="svg-inline--fa fa-layer-group" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="layer-group" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" data-fa-i2svg=""><path fill="currentColor" d="M264.5 5.2c14.9-6.9 32.1-6.9 47 0l218.6 101c8.5 3.9 13.9 12.4 13.9 21.8s-5.4 17.9-13.9 21.8l-218.6 101c-14.9 6.9-32.1 6.9-47 0L45.9 149.8C37.4 145.8 32 137.3 32 128s5.4-17.9 13.9-21.8L264.5 5.2zM476.9 209.6l53.2 24.6c8.5 3.9 13.9 12.4 13.9 21.8s-5.4 17.9-13.9 21.8l-218.6 101c-14.9 6.9-32.1 6.9-47 0L45.9 277.8C37.4 273.8 32 265.3 32 256s5.4-17.9 13.9-21.8l53.2-24.6 152 70.2c23.4 10.8 50.4 10.8 73.8 0l152-70.2zm-152 198.2l152-70.2 53.2 24.6c8.5 3.9 13.9 12.4 13.9 21.8s-5.4 17.9-13.9 21.8l-218.6 101c-14.9 6.9-32.1 6.9-47 0L45.9 405.8C37.4 401.8 32 393.3 32 384s5.4-17.9 13.9-21.8l53.2-24.6 152 70.2c23.4 10.8 50.4 10.8 73.8 0z"></path></svg></i> Additional Options
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Shortcuts -->
+                            <div class="bg-white border border-brand-200 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-brand-800 mb-3">Shortcuts</h4>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center justify-center">
+                                            <input type="checkbox" checked="" class="peer appearance-none w-4 h-4 border-2 border-brand-300 rounded bg-white checked:bg-brand-900 checked:border-brand-900 transition-all cursor-pointer">
+                                            <i class="absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                                        </div>
+                                        <span class="text-sm text-brand-600 group-hover:text-brand-900 transition-colors">Desktop Shortcut</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center justify-center">
+                                            <input type="checkbox" checked="" class="peer appearance-none w-4 h-4 border-2 border-brand-300 rounded bg-white checked:bg-brand-900 checked:border-brand-900 transition-all cursor-pointer">
+                                            <i class="absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                                        </div>
+                                        <span class="text-sm text-brand-600 group-hover:text-brand-900 transition-colors">Start Menu Program Folder</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Components -->
+                            <div class="bg-white border border-brand-200 rounded-lg p-4">
+                                <h4 class="text-sm font-medium text-brand-800 mb-3">Components</h4>
+                                <div class="space-y-2">
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center justify-center">
+                                            <input type="checkbox" checked="" disabled="" class="peer appearance-none w-4 h-4 border-2 border-brand-300 rounded bg-brand-100 checked:bg-brand-500 checked:border-brand-500 transition-all cursor-not-allowed">
+                                            <i class="absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                                        </div>
+                                        <span class="text-sm text-brand-500">Core Files (Required)</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 cursor-pointer group">
+                                        <div class="relative flex items-center justify-center">
+                                            <input type="checkbox" checked="" class="peer appearance-none w-4 h-4 border-2 border-brand-300 rounded bg-white checked:bg-brand-900 checked:border-brand-900 transition-all cursor-pointer">
+                                            <i class="absolute text-white text-[10px] opacity-0 peer-checked:opacity-100 pointer-events-none" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                                        </div>
+                                        <span class="text-sm text-brand-600 group-hover:text-brand-900 transition-colors">Example Templates (150 MB)</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="px-8 py-6 border-t border-brand-100 bg-brand-50 flex items-center justify-between mt-auto">
+                <button class="px-6 py-2.5 text-sm font-medium text-brand-600 hover:text-brand-900 transition-colors">
+                    Cancel
+                </button>
+                <div class="flex gap-3">
+                    <button class="px-6 py-2.5 text-sm font-medium text-brand-600 bg-white border border-brand-200 rounded-lg hover:bg-brand-50 hover:text-brand-900 transition-all shadow-sm">
+                        Back
+                    </button>
+                    <button class="px-8 py-2.5 text-sm font-medium text-white bg-brand-900 rounded-lg hover:bg-brand-800 transition-all shadow-sm flex items-center gap-2" id="install-btn">
+                        Install <i class="text-xs" data-fa-i2svg=""><svg class="svg-inline--fa fa-arrow-right" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="arrow-right" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"></path></svg></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add subtle interaction for the radio buttons to highlight the selected container
+            const radios = document.querySelectorAll('input[name="install_scope"]');
+            radios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    // Reset all borders
+                    document.querySelectorAll('input[name="install_scope"]').forEach(r => {
+                        r.closest('label').classList.remove('border-brand-500', 'bg-brand-50');
+                        r.closest('label').classList.add('border-brand-200');
+                    });
+                    
+                    // Highlight selected
+                    if(this.checked) {
+                        this.closest('label').classList.remove('border-brand-200');
+                        this.closest('label').classList.add('border-brand-500', 'bg-brand-50');
+                    }
+                });
+            });
+            
+            // Initialize first radio state
+            const checkedRadio = document.querySelector('input[name="install_scope"]:checked');
+            if(checkedRadio) {
+                checkedRadio.closest('label').classList.remove('border-brand-200');
+                checkedRadio.closest('label').classList.add('border-brand-500', 'bg-brand-50');
+            }
+        });
+    </script>
+
+  <script>
+    (function() {
+      function blockEvent(e) {
+        if (!e) return false;
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return false;
+      }
+
+      // Block all anchor navigations (including http(s), mailto, tel, hash, fragments)
+      document.addEventListener('click', function(e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        return blockEvent(e);
+      }, true);
+
+      // Neutralize programmatic navigation attempts
+      try { window.open = function() { return null }; } catch (_) {}
+      try {
+        var noop = function(){};
+        history.pushState = noop;
+        history.replaceState = noop;
+      } catch (_) {}
+      try {
+        if (window.location) {
+          window.location.assign = function(){};
+          window.location.replace = function(){};
+        }
+      } catch (_) {}
+    })();
+  </script>
+<script>
+(function() {
+  function _uxpResizeCharts() {
+    if (window.Plotly) {
+      document.querySelectorAll('.plot-container.plotly').forEach(function(pc) {
+        var gd = pc.parentElement;
+        if (!gd) return;
+        var rect = gd.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        try { window.Plotly.relayout(gd, { width: Math.round(rect.width), height: Math.round(rect.height) }); } catch(e) {}
+      });
+    }
+    if (window.ApexCharts && window.Apex && window.Apex._chartInstances) {
+      window.Apex._chartInstances.forEach(function(inst) {
+        try { (inst.chart || inst).updateOptions({}, false, false); } catch(e) {}
+      });
+    }
+    if (window.Chart) {
+      try { Object.values(window.Chart.instances || {}).forEach(function(c) { c.resize(); }); } catch(e) {}
+    }
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() { _uxpResizeCharts(); setTimeout(_uxpResizeCharts, 500); }, 300);
+    try {
+      var _lastW = 0, _lastH = 0, _timer = 0;
+      new ResizeObserver(function() {
+        var w = document.documentElement.clientWidth;
+        var h = document.documentElement.clientHeight;
+        if (w === _lastW && h === _lastH) return;
+        _lastW = w; _lastH = h;
+        clearTimeout(_timer);
+        _timer = setTimeout(_uxpResizeCharts, 150);
+      }).observe(document.documentElement);
+    } catch(e) {}
+  });
+})();
+</script>
+</body>

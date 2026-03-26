@@ -1,0 +1,223 @@
+<body class="bg-brand-50 min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <div id="installer-container" class="bg-white w-full max-w-[1000px] rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-brand-100">
+        
+        <!-- Sidebar Navigation -->
+        <div id="sidebar" class="w-full md:w-64 bg-brand-50 p-6 md:p-8 border-b md:border-b-0 md:border-r border-brand-200 flex flex-col">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-sm">
+                    S
+                </div>
+                <span class="font-bold text-brand-900 text-lg">SoftwarePro</span>
+            </div>
+
+            <nav class="flex-1">
+                <ul class="space-y-6">
+                    <!-- Completed Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-success"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-success text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-semibold text-brand-900">License Agreement</p>
+                            <p class="text-xs text-brand-500 mt-1">Review terms &amp; conditions</p>
+                        </div>
+                    </li>
+
+                    <!-- Completed Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-success"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-success text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-semibold text-brand-900">Installation Settings</p>
+                            <p class="text-xs text-brand-500 mt-1">Configure preferences</p>
+                        </div>
+                    </li>
+
+                    <!-- Completed Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-success"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-success text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-semibold text-brand-900">Installation Progress</p>
+                            <p class="text-xs text-brand-500 mt-1">Installing files</p>
+                        </div>
+                    </li>
+
+                    <!-- Active Step -->
+                    <li class="relative flex items-start group">
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-purple text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5 shadow-[0_0_0_4px_rgba(107,70,193,0.2)]">
+                            4
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-bold text-brand-900">Success</p>
+                            <p class="text-xs text-brand-500 mt-1">Ready to use</p>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="mt-auto pt-8 text-xs text-brand-400">
+                v2.4.1 build 8920
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="flex-1 flex flex-col bg-white">
+            
+            <!-- Header -->
+            <div class="px-8 py-6 border-b border-brand-100 flex justify-between items-center bg-white">
+                <div>
+                    <h1 class="text-xl font-bold text-brand-900">Installation Complete</h1>
+                    <p class="text-sm text-brand-500 mt-1">SoftwarePro has been successfully installed.</p>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 p-8 flex flex-col justify-center items-center">
+                
+                <div id="success-section" class="max-w-xl mx-auto w-full flex flex-col items-center text-center space-y-8">
+                    
+                    <!-- Success Icon -->
+                    <div class="w-24 h-24 rounded-full bg-brand-successLight flex items-center justify-center success-animation shadow-lg border-4 border-white">
+                        <svg class="w-12 h-12 text-brand-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path class="check-animation" stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div>
+                        <h2 class="text-2xl font-bold text-brand-900 mb-2">Ready to Go!</h2>
+                        <p class="text-brand-500 text-sm max-w-md mx-auto">SoftwarePro v2.4.1 has been successfully installed on your system. You can now start using the application.</p>
+                    </div>
+
+                    <!-- Installation Summary -->
+                    <div class="w-full bg-brand-50 rounded-xl p-6 border border-brand-100 text-left">
+                        <h3 class="text-sm font-semibold text-brand-900 mb-4 border-b border-brand-200 pb-2">Installation Summary</h3>
+                        <ul class="space-y-3 text-sm text-brand-600">
+                            <li class="flex justify-between">
+                                <span>Install Location:</span>
+                                <span class="font-medium text-brand-900">C:\Program Files\SoftwarePro</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span>Version Installed:</span>
+                                <span class="font-medium text-brand-900">v2.4.1 (Build 8920)</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span>Space Used:</span>
+                                <span class="font-medium text-brand-900">450 MB</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Launch Options & Links -->
+                    <div class="w-full space-y-4 text-left">
+                        <label class="flex items-center gap-3 p-3 rounded-lg border border-brand-200 hover:bg-brand-50 cursor-pointer transition-colors">
+                            <input type="checkbox" checked="" class="w-5 h-5 rounded border-brand-300 text-brand-purple focus:ring-brand-purple">
+                            <span class="text-sm font-medium text-brand-900">Launch SoftwarePro now</span>
+                        </label>
+                        
+                        <div class="flex gap-4 justify-center text-sm pt-2">
+                            <a href="#" class="text-brand-purple hover:text-brand-purpleLight font-medium flex items-center gap-1 transition-colors">
+                                <i class="text-xs" data-fa-i2svg=""><svg class="svg-inline--fa fa-book-open" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="book-open" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" data-fa-i2svg=""><path fill="currentColor" d="M249.6 471.5c10.8 3.8 22.4-4.1 22.4-15.5V78.6c0-4.2-1.6-8.4-5-11C247.4 52 202.4 32 144 32C93.5 32 46.3 45.3 18.1 56.1C6.8 60.5 0 71.7 0 83.8V454.1c0 11.9 12.8 20.2 24.1 16.5C55.6 460.1 105.5 448 144 448c33.9 0 79 14 105.6 23.5zm76.8 0C353 462 398.1 448 432 448c38.5 0 88.4 12.1 119.9 22.6c11.3 3.8 24.1-4.6 24.1-16.5V83.8c0-12.1-6.8-23.3-18.1-27.6C529.7 45.3 482.5 32 432 32c-58.4 0-103.4 20-123 35.6c-3.3 2.6-5 6.8-5 11V456c0 11.4 11.7 19.3 22.4 15.5z"></path></svg></i> View Documentation
+                            </a>
+                            <span class="text-brand-300">|</span>
+                            <a href="#" class="text-brand-purple hover:text-brand-purpleLight font-medium flex items-center gap-1 transition-colors">
+                                <i class="text-xs" data-fa-i2svg=""><svg class="svg-inline--fa fa-file-lines" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="file-lines" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M64 0C28.7 0 0 28.7 0 64V448c0 35.3 28.7 64 64 64H320c35.3 0 64-28.7 64-64V160H256c-17.7 0-32-14.3-32-32V0H64zM256 0V128H384L256 0zM112 256H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16zm0 64H272c8.8 0 16 7.2 16 16s-7.2 16-16 16H112c-8.8 0-16-7.2-16-16s7.2-16 16-16z"></path></svg></i> Release Notes
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="px-8 py-6 border-t border-brand-100 bg-brand-50 flex items-center justify-end mt-auto">
+                <div class="flex gap-3">
+                    <button class="px-8 py-2.5 text-sm font-medium text-white bg-brand-purple hover:bg-brand-purpleLight rounded-lg transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                        Finish <i class="text-xs" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+  <script>
+    (function() {
+      function blockEvent(e) {
+        if (!e) return false;
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return false;
+      }
+
+      // Block all anchor navigations (including http(s), mailto, tel, hash, fragments)
+      document.addEventListener('click', function(e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        return blockEvent(e);
+      }, true);
+
+      // Neutralize programmatic navigation attempts
+      try { window.open = function() { return null }; } catch (_) {}
+      try {
+        var noop = function(){};
+        history.pushState = noop;
+        history.replaceState = noop;
+      } catch (_) {}
+      try {
+        if (window.location) {
+          window.location.assign = function(){};
+          window.location.replace = function(){};
+        }
+      } catch (_) {}
+    })();
+  </script>
+<script>
+(function() {
+  function _uxpResizeCharts() {
+    if (window.Plotly) {
+      document.querySelectorAll('.plot-container.plotly').forEach(function(pc) {
+        var gd = pc.parentElement;
+        if (!gd) return;
+        var rect = gd.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        try { window.Plotly.relayout(gd, { width: Math.round(rect.width), height: Math.round(rect.height) }); } catch(e) {}
+      });
+    }
+    if (window.ApexCharts && window.Apex && window.Apex._chartInstances) {
+      window.Apex._chartInstances.forEach(function(inst) {
+        try { (inst.chart || inst).updateOptions({}, false, false); } catch(e) {}
+      });
+    }
+    if (window.Chart) {
+      try { Object.values(window.Chart.instances || {}).forEach(function(c) { c.resize(); }); } catch(e) {}
+    }
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() { _uxpResizeCharts(); setTimeout(_uxpResizeCharts, 500); }, 300);
+    try {
+      var _lastW = 0, _lastH = 0, _timer = 0;
+      new ResizeObserver(function() {
+        var w = document.documentElement.clientWidth;
+        var h = document.documentElement.clientHeight;
+        if (w === _lastW && h === _lastH) return;
+        _lastW = w; _lastH = h;
+        clearTimeout(_timer);
+        _timer = setTimeout(_uxpResizeCharts, 150);
+      }).observe(document.documentElement);
+    } catch(e) {}
+  });
+})();
+</script>
+</body>

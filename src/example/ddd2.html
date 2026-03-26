@@ -1,0 +1,332 @@
+<body class="bg-brand-50 min-h-screen w-full flex items-center justify-center p-4 sm:p-6 lg:p-8">
+
+    <div id="installer-container" class="bg-white w-full max-w-[1000px] rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-brand-100">
+        
+        <!-- Sidebar Navigation -->
+        <div id="sidebar" class="w-full md:w-64 bg-brand-50 p-6 md:p-8 border-b md:border-b-0 md:border-r border-brand-200 flex flex-col">
+            <div class="flex items-center gap-3 mb-10">
+                <div class="w-8 h-8 rounded-lg bg-brand-purple flex items-center justify-center text-white font-bold text-sm">
+                    S
+                </div>
+                <span class="font-bold text-brand-900 text-lg">SoftwarePro</span>
+            </div>
+
+            <nav class="flex-1">
+                <ul class="space-y-6">
+                    <!-- Completed Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-purple"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-purple text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-semibold text-brand-900">License Agreement</p>
+                            <p class="text-xs text-brand-500 mt-1">Review terms &amp; conditions</p>
+                        </div>
+                    </li>
+
+                    <!-- Completed Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-purple"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-purple text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-check" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="check" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"></path></svg></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-semibold text-brand-900">Installation Settings</p>
+                            <p class="text-xs text-brand-500 mt-1">Configure preferences</p>
+                        </div>
+                    </li>
+
+                    <!-- Active Step -->
+                    <li class="relative flex items-start group">
+                        <div class="absolute left-[11px] top-7 bottom-[-24px] w-[2px] bg-brand-200"></div>
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-brand-purple text-white text-xs z-10 ring-4 ring-brand-50 mt-0.5 shadow-[0_0_0_4px_rgba(107,70,193,0.2)]">
+                            3
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-bold text-brand-900">Installation Progress</p>
+                            <p class="text-xs text-brand-500 mt-1">Installing files</p>
+                        </div>
+                    </li>
+
+                    <!-- Pending Step -->
+                    <li class="relative flex items-start group">
+                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-white border-2 border-brand-300 text-brand-400 text-xs z-10 ring-4 ring-brand-50 mt-0.5">
+                            4
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-brand-500">Success</p>
+                            <p class="text-xs text-brand-400 mt-1">Ready to use</p>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="mt-auto pt-8 text-xs text-brand-400">
+                v2.4.1 build 8920
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="flex-1 flex flex-col bg-white">
+            
+            <!-- Header -->
+            <div class="px-8 py-6 border-b border-brand-100 flex justify-between items-center bg-white">
+                <div>
+                    <h1 class="text-xl font-bold text-brand-900">Installing SoftwarePro</h1>
+                    <p class="text-sm text-brand-500 mt-1">Please wait while the installation completes.</p>
+                </div>
+                <div class="text-brand-purple animate-pulse">
+                    <i class="text-xl" data-fa-i2svg=""><svg class="svg-inline--fa fa-gear fa-spin" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="gear" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"></path></svg></i>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1 p-8 flex flex-col justify-center">
+                
+                <div id="progress-section" class="max-w-xl mx-auto w-full space-y-8">
+                    
+                    <!-- Status Illustration / Icon -->
+                    <div class="flex justify-center mb-8">
+                        <div class="w-24 h-24 rounded-full bg-brand-50 flex items-center justify-center border-4 border-white shadow-lg relative">
+                            <div class="absolute inset-0 rounded-full border-4 border-brand-purple border-t-transparent animate-spin"></div>
+                            <i class="text-3xl text-brand-purple" data-fa-i2svg=""><svg class="svg-inline--fa fa-cloud-arrow-down" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="cloud-arrow-down" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" data-fa-i2svg=""><path fill="currentColor" d="M144 480C64.5 480 0 415.5 0 336c0-62.8 40.2-116.2 96.2-135.9c-.1-2.7-.2-5.4-.2-8.1c0-88.4 71.6-160 160-160c59.3 0 111 32.2 138.7 80.2C409.9 102 428.3 96 448 96c53 0 96 43 96 96c0 12.2-2.3 23.8-6.4 34.6C596 238.4 640 290.1 640 352c0 70.7-57.3 128-128 128H144zm79-167l80 80c9.4 9.4 24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-39 39V184c0-13.3-10.7-24-24-24s-24 10.7-24 24V318.1l-39-39c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9z"></path></svg></i>
+                        </div>
+                    </div>
+
+                    <!-- Progress Info -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <h3 class="text-base font-semibold text-brand-900" id="current-step">Copying core files...</h3>
+                                <p class="text-xs text-brand-500 mt-1" id="current-file">C:\Program Files\SoftwarePro\bin\core.dll</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-2xl font-bold text-brand-purple" id="progress-percentage">47%</span>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="w-full h-3 bg-brand-100 rounded-full overflow-hidden shadow-inner">
+                            <div id="progress-bar-fill" class="h-full bg-brand-purple rounded-full progress-bar-animated transition-all duration-300 ease-out" style="width: 47.0957%;"></div>
+                        </div>
+
+                        <!-- Time Estimates -->
+                        <div class="flex justify-between text-xs text-brand-500 font-medium">
+                            <span class="flex items-center gap-1.5"><i data-fa-i2svg=""><svg class="svg-inline--fa fa-clock" aria-hidden="true" focusable="false" data-prefix="far" data-icon="clock" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M464 256A208 208 0 1 1 48 256a208 208 0 1 1 416 0zM0 256a256 256 0 1 0 512 0A256 256 0 1 0 0 256zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"></path></svg></i> Elapsed: 00:01:24</span>
+                            <span class="flex items-center gap-1.5"><i data-fa-i2svg=""><svg class="svg-inline--fa fa-hourglass-half" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="hourglass-half" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" data-fa-i2svg=""><path fill="currentColor" d="M32 0C14.3 0 0 14.3 0 32S14.3 64 32 64V75c0 42.4 16.9 83.1 46.9 113.1L146.7 256 78.9 323.9C48.9 353.9 32 394.6 32 437v11c-17.7 0-32 14.3-32 32s14.3 32 32 32H64 320h32c17.7 0 32-14.3 32-32s-14.3-32-32-32V437c0-42.4-16.9-83.1-46.9-113.1L237.3 256l67.9-67.9c30-30 46.9-70.7 46.9-113.1V64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320 64 32zM96 75V64H288V75c0 19-5.6 37.4-16 53H112c-10.3-15.6-16-34-16-53zm16 309c3.5-5.3 7.6-10.3 12.1-14.9L192 301.3l67.9 67.9c4.6 4.6 8.6 9.6 12.1 14.9H112z"></path></svg></i> Remaining: ~00:02:10</span>
+                        </div>
+                    </div>
+
+                    <!-- Details / Log Toggle -->
+                    <div class="pt-4 border-t border-brand-100">
+                        <button id="toggle-log-btn" class="flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-purple transition-colors focus:outline-none">
+                            <i class="text-xs transition-transform duration-200" id="log-icon" data-fa-i2svg=""><svg class="svg-inline--fa fa-chevron-right" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="chevron-right" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512" data-fa-i2svg=""><path fill="currentColor" d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"></path></svg></i>
+                            Show Details
+                        </button>
+                        
+                        <!-- Log Area -->
+                        <div id="installation-log" class="log-container mt-3 bg-brand-900 rounded-lg text-xs font-mono text-brand-300 p-4 border border-brand-800 shadow-inner">
+                            <div class="space-y-1">
+                                <div class="text-brand-400">[10:45:01] Starting installation process...</div>
+                                <div class="text-brand-400">[10:45:02] Verifying system requirements... OK</div>
+                                <div class="text-brand-400">[10:45:05] Creating directory C:\Program Files\SoftwarePro...</div>
+                                <div class="text-brand-400">[10:45:06] Extracting package contents...</div>
+                                <div>[10:45:10] Copying file: lib_main.dll (24.5 MB)</div>
+                                <div>[10:45:15] Copying file: ui_components.pkg (12.1 MB)</div>
+                                <div>[10:45:18] Copying file: database_driver.sys (8.4 MB)</div>
+                                <div class="text-white font-semibold flex items-center gap-2">
+                                    <i class="text-[10px]" data-fa-i2svg=""><svg class="svg-inline--fa fa-circle-notch fa-spin" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="circle-notch" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M222.7 32.1c5 16.9-4.6 34.8-21.5 39.8C121.8 95.6 64 169.1 64 256c0 106 86 192 192 192s192-86 192-192c0-86.9-57.8-160.4-137.1-184.1c-16.9-5-26.6-22.9-21.5-39.8s22.9-26.6 39.8-21.5C434.9 42.1 512 140 512 256c0 141.4-114.6 256-256 256S0 397.4 0 256C0 140 77.1 42.1 182.9 10.6c16.9-5 34.8 4.6 39.8 21.5z"></path></svg></i> Copying file: core.dll (145.2 MB)...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="px-8 py-6 border-t border-brand-100 bg-brand-50 flex items-center justify-between mt-auto">
+                <button id="cancel-btn" class="px-6 py-2.5 text-sm font-medium text-brand-600 hover:text-red-600 transition-colors">
+                    Cancel
+                </button>
+                <div class="flex gap-3">
+                    <button disabled="" class="px-6 py-2.5 text-sm font-medium text-brand-400 bg-brand-100 border border-brand-200 rounded-lg cursor-not-allowed transition-all shadow-sm">
+                        Back
+                    </button>
+                    <button disabled="" class="px-8 py-2.5 text-sm font-medium text-brand-400 bg-brand-200 rounded-lg cursor-not-allowed transition-all shadow-sm flex items-center gap-2">
+                        Next <i class="text-xs" data-fa-i2svg=""><svg class="svg-inline--fa fa-arrow-right" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="arrow-right" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" data-fa-i2svg=""><path fill="currentColor" d="M438.6 278.6c12.5-12.5 12.5-32.8 0-45.3l-160-160c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L338.8 224 32 224c-17.7 0-32 14.3-32 32s14.3 32 32 32l306.7 0L233.4 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l160-160z"></path></svg></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Cancel Confirmation Modal (Hidden by default) -->
+    <div id="cancel-modal" class="fixed inset-0 bg-brand-900/50 backdrop-blur-sm z-50 hidden items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="flex items-start gap-4">
+                <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <i class="text-red-600" data-fa-i2svg=""><svg class="svg-inline--fa fa-triangle-exclamation" aria-hidden="true" focusable="false" data-prefix="fas" data-icon="triangle-exclamation" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-fa-i2svg=""><path fill="currentColor" d="M256 32c14.2 0 27.3 7.5 34.5 19.8l216 368c7.3 12.4 7.3 27.7 .2 40.1S486.3 480 472 480H40c-14.3 0-27.6-7.7-34.7-20.1s-7-27.8 .2-40.1l216-368C228.7 39.5 241.8 32 256 32zm0 128c-13.3 0-24 10.7-24 24V296c0 13.3 10.7 24 24 24s24-10.7 24-24V184c0-13.3-10.7-24-24-24zm32 224a32 32 0 1 0 -64 0 32 32 0 1 0 64 0z"></path></svg></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-brand-900">Cancel Installation?</h3>
+                    <p class="text-sm text-brand-500 mt-2">Are you sure you want to cancel the installation? This will stop the current process and roll back any changes made so far.</p>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button id="resume-btn" class="px-4 py-2 text-sm font-medium text-brand-700 bg-white border border-brand-300 rounded-lg hover:bg-brand-50 transition-colors">
+                    Resume Installation
+                </button>
+                <button class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+                    Yes, Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Log Toggle Logic
+            const toggleLogBtn = document.getElementById('toggle-log-btn');
+            const logContainer = document.getElementById('installation-log');
+            const logIcon = document.getElementById('log-icon');
+            let isLogExpanded = false;
+
+            toggleLogBtn.addEventListener('click', function() {
+                isLogExpanded = !isLogExpanded;
+                if(isLogExpanded) {
+                    logContainer.classList.add('expanded');
+                    logIcon.classList.add('rotate-90');
+                    toggleLogBtn.innerHTML = `<i class="fa-solid fa-chevron-right text-xs transition-transform duration-200 rotate-90" id="log-icon"></i> Hide Details`;
+                } else {
+                    logContainer.classList.remove('expanded');
+                    logIcon.classList.remove('rotate-90');
+                    toggleLogBtn.innerHTML = `<i class="fa-solid fa-chevron-right text-xs transition-transform duration-200" id="log-icon"></i> Show Details`;
+                }
+            });
+
+            // Cancel Modal Logic
+            const cancelBtn = document.getElementById('cancel-btn');
+            const cancelModal = document.getElementById('cancel-modal');
+            const modalContent = document.getElementById('modal-content');
+            const resumeBtn = document.getElementById('resume-btn');
+
+            function showModal() {
+                cancelModal.classList.remove('hidden');
+                cancelModal.classList.add('flex');
+                // Trigger reflow
+                void cancelModal.offsetWidth;
+                cancelModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }
+
+            function hideModal() {
+                cancelModal.classList.add('opacity-0');
+                modalContent.classList.remove('scale-100');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    cancelModal.classList.add('hidden');
+                    cancelModal.classList.remove('flex');
+                }, 300);
+            }
+
+            cancelBtn.addEventListener('click', showModal);
+            resumeBtn.addEventListener('click', hideModal);
+
+            // Close modal on outside click
+            cancelModal.addEventListener('click', function(e) {
+                if(e.target === cancelModal) {
+                    hideModal();
+                }
+            });
+
+            // Simulate progress (for visual effect only)
+            let progress = 45;
+            const progressBar = document.getElementById('progress-bar-fill');
+            const progressText = document.getElementById('progress-percentage');
+            
+            setInterval(() => {
+                if(progress < 95 && Math.random() > 0.5) {
+                    progress += Math.random() * 2;
+                    progressBar.style.width = `${Math.min(progress, 100)}%`;
+                    progressText.innerText = `${Math.floor(progress)}%`;
+                }
+            }, 1000);
+        });
+    </script>
+
+  <script>
+    (function() {
+      function blockEvent(e) {
+        if (!e) return false;
+        if (typeof e.preventDefault === 'function') e.preventDefault();
+        if (typeof e.stopPropagation === 'function') e.stopPropagation();
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return false;
+      }
+
+      // Block all anchor navigations (including http(s), mailto, tel, hash, fragments)
+      document.addEventListener('click', function(e) {
+        var a = e.target && e.target.closest ? e.target.closest('a[href]') : null;
+        if (!a) return;
+        return blockEvent(e);
+      }, true);
+
+      // Neutralize programmatic navigation attempts
+      try { window.open = function() { return null }; } catch (_) {}
+      try {
+        var noop = function(){};
+        history.pushState = noop;
+        history.replaceState = noop;
+      } catch (_) {}
+      try {
+        if (window.location) {
+          window.location.assign = function(){};
+          window.location.replace = function(){};
+        }
+      } catch (_) {}
+    })();
+  </script>
+<script>
+(function() {
+  function _uxpResizeCharts() {
+    if (window.Plotly) {
+      document.querySelectorAll('.plot-container.plotly').forEach(function(pc) {
+        var gd = pc.parentElement;
+        if (!gd) return;
+        var rect = gd.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return;
+        try { window.Plotly.relayout(gd, { width: Math.round(rect.width), height: Math.round(rect.height) }); } catch(e) {}
+      });
+    }
+    if (window.ApexCharts && window.Apex && window.Apex._chartInstances) {
+      window.Apex._chartInstances.forEach(function(inst) {
+        try { (inst.chart || inst).updateOptions({}, false, false); } catch(e) {}
+      });
+    }
+    if (window.Chart) {
+      try { Object.values(window.Chart.instances || {}).forEach(function(c) { c.resize(); }); } catch(e) {}
+    }
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() { _uxpResizeCharts(); setTimeout(_uxpResizeCharts, 500); }, 300);
+    try {
+      var _lastW = 0, _lastH = 0, _timer = 0;
+      new ResizeObserver(function() {
+        var w = document.documentElement.clientWidth;
+        var h = document.documentElement.clientHeight;
+        if (w === _lastW && h === _lastH) return;
+        _lastW = w; _lastH = h;
+        clearTimeout(_timer);
+        _timer = setTimeout(_uxpResizeCharts, 150);
+      }).observe(document.documentElement);
+    } catch(e) {}
+  });
+})();
+</script>
+</body>
