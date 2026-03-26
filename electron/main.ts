@@ -113,6 +113,58 @@ function getPathEnv(env: NodeJS.ProcessEnv = process.env) {
   return getEnvValue(env, 'PATH')
 }
 
+function getWindowsRuntimePathCandidates() {
+  const appData = getEnvValue(resolvedRuntimeEnv, 'APPDATA')
+    || getEnvValue(process.env, 'APPDATA')
+    || join(os.homedir(), 'AppData', 'Roaming')
+  const localAppData = getEnvValue(resolvedRuntimeEnv, 'LOCALAPPDATA')
+    || getEnvValue(process.env, 'LOCALAPPDATA')
+    || join(os.homedir(), 'AppData', 'Local')
+  const userProfile = getEnvValue(resolvedRuntimeEnv, 'USERPROFILE')
+    || getEnvValue(process.env, 'USERPROFILE')
+    || os.homedir()
+  const programFiles = getEnvValue(resolvedRuntimeEnv, 'ProgramFiles')
+    || getEnvValue(process.env, 'ProgramFiles')
+    || 'C:\\Program Files'
+  const pnpmHome = getEnvValue(resolvedRuntimeEnv, 'PNPM_HOME')
+    || getEnvValue(process.env, 'PNPM_HOME')
+    || getPnpmHomeDir()
+
+  return [
+    join(appData, 'npm'),
+    join(localAppData, 'pnpm'),
+    join(userProfile, 'AppData', 'Local', 'pnpm'),
+    pnpmHome,
+    join(programFiles, 'nodejs')
+  ]
+}
+
+function expandWindowsCommandCandidates(...commandPaths: string[]) {
+  const expanded = commandPaths.flatMap((commandPath) => {
+    const hasExtension = /\.[^\\/]+$/.test(commandPath)
+    if (hasExtension) {
+      return [commandPath]
+    }
+
+    return [
+      commandPath,
+      `${commandPath}.cmd`,
+      `${commandPath}.exe`,
+      `${commandPath}.bat`
+    ]
+  })
+
+  const seen = new Set<string>()
+  return expanded.filter((candidate) => {
+    const key = candidate.toLowerCase()
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+}
+
 function withNormalizedPathEnv(env: NodeJS.ProcessEnv, pathValue: string) {
   const normalizedEnv: NodeJS.ProcessEnv = {}
 
@@ -571,6 +623,11 @@ async function getCommandStatus(command: string, versionArgs: string[]): Promise
 async function whichCommand(command: string): Promise<string | null> {
   const env = withNormalizedPathEnv(resolvedRuntimeEnv, buildRuntimePath())
   const shellCommand = getShellCommand(command)
+  const knownPath = getKnownCommandPath(command)
+
+  if (knownPath) {
+    return knownPath
+  }
 
   try {
     execSync(`${shellCommand} --version`, {
@@ -580,9 +637,9 @@ async function whichCommand(command: string): Promise<string | null> {
       stdio: 'pipe'
     })
 
-    return getKnownCommandPath(command) || shellCommand
+    return shellCommand
   } catch {
-    return getKnownCommandPath(command)
+    return null
   }
 }
 
@@ -957,31 +1014,52 @@ function getKnownCommandPath(command: string): string | null {
   }
 
   if (process.platform === 'win32') {
-    const base = getEnvValue(process.env, 'ProgramFiles') || 'C:\\Program Files'
-    const x86 = getEnvValue(process.env, 'ProgramFiles(x86)') || 'C:\\Program Files (x86)'
-    const appData = getEnvValue(process.env, 'APPDATA') || join(os.homedir(), 'AppData', 'Roaming')
-    const localAppData = getEnvValue(process.env, 'LOCALAPPDATA') || join(os.homedir(), 'AppData', 'Local')
+    const base = getEnvValue(resolvedRuntimeEnv, 'ProgramFiles')
+      || getEnvValue(process.env, 'ProgramFiles')
+      || 'C:\\Program Files'
+    const x86 = getEnvValue(resolvedRuntimeEnv, 'ProgramFiles(x86)')
+      || getEnvValue(process.env, 'ProgramFiles(x86)')
+      || 'C:\\Program Files (x86)'
+    const appData = getEnvValue(resolvedRuntimeEnv, 'APPDATA')
+      || getEnvValue(process.env, 'APPDATA')
+      || join(os.homedir(), 'AppData', 'Roaming')
+    const localAppData = getEnvValue(resolvedRuntimeEnv, 'LOCALAPPDATA')
+      || getEnvValue(process.env, 'LOCALAPPDATA')
+      || join(os.homedir(), 'AppData', 'Local')
     const pnpmHome = getPnpmHomeDir()
     const winCandidates: Record<string, string[]> = {
-      node: [join(base, 'nodejs', 'node.exe'), join(x86, 'nodejs', 'node.exe')],
-      npm: [join(base, 'nodejs', 'npm.cmd'), join(x86, 'nodejs', 'npm.cmd')],
-      pnpm: [
-        join(appData, 'npm', 'pnpm.cmd'),
-        join(localAppData, 'pnpm', 'pnpm.cmd'),
-        join(pnpmHome, 'pnpm.cmd'),
-        join(base, 'nodejs', 'pnpm.cmd'),
-        join(x86, 'nodejs', 'pnpm.cmd')
-      ],
-      openclaw: [
-        join(appData, 'npm', 'openclaw.cmd'),
-        join(localAppData, 'pnpm', 'openclaw.cmd'),
-        join(pnpmHome, 'openclaw.cmd'),
-        join(base, 'nodejs', 'openclaw.cmd'),
-        join(x86, 'nodejs', 'openclaw.cmd')
-      ]
+      node: expandWindowsCommandCandidates(
+        join(base, 'nodejs', 'node'),
+        join(x86, 'nodejs', 'node')
+      ),
+      npm: expandWindowsCommandCandidates(
+        join(base, 'nodejs', 'npm'),
+        join(x86, 'nodejs', 'npm'),
+        join(appData, 'npm', 'npm'),
+        join(localAppData, 'pnpm', 'npm'),
+        join(pnpmHome, 'npm')
+      ),
+      pnpm: expandWindowsCommandCandidates(
+        join(localAppData, 'pnpm', 'pnpm'),
+        join(appData, 'npm', 'pnpm'),
+        join(pnpmHome, 'pnpm'),
+        join(base, 'nodejs', 'pnpm'),
+        join(x86, 'nodejs', 'pnpm')
+      ),
+      openclaw: expandWindowsCommandCandidates(
+        join(localAppData, 'pnpm', 'openclaw'),
+        join(appData, 'npm', 'openclaw'),
+        join(pnpmHome, 'openclaw'),
+        join(base, 'nodejs', 'openclaw'),
+        join(x86, 'nodejs', 'openclaw')
+      )
     }
 
-    return winCandidates[command]?.find(path => fs.existsSync(path)) || null
+    const matchedPath = winCandidates[command]?.find(path => fs.existsSync(path)) || null
+    if (matchedPath) {
+      log.info('[KNOWN COMMAND PATH]', { command, matchedPath })
+    }
+    return matchedPath
   }
 
   return null
@@ -1259,6 +1337,7 @@ function buildRuntimePath(extraPath?: string) {
   const delimiter = process.platform === 'win32' ? ';' : ':'
   const rawSegments = [
     extraPath,
+    ...(process.platform === 'win32' ? getWindowsRuntimePathCandidates() : []),
     getPathEnv(resolvedRuntimeEnv),
     getPathEnv(process.env)
   ]
