@@ -1,12 +1,15 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { fileURLToPath } from 'url'
 import { basename, dirname, join } from 'path'
-import { exec } from 'child_process'
+import { exec, execSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import https from 'https'
 import log from 'electron-log'
 import { execa, execaCommand } from 'execa'
+import shellEnv from 'shell-env'
+import { coerce, compare, gte } from 'semver'
+import sudoPrompt from 'sudo-prompt'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -14,6 +17,7 @@ const __dirname = dirname(__filename)
 log.initialize()
 
 let mainWindow: BrowserWindow | null = null
+let resolvedRuntimeEnv: NodeJS.ProcessEnv = { ...process.env }
 
 type InstallProgressStage =
   | 'idle'
@@ -49,6 +53,8 @@ interface InstallResult {
   success: boolean
   error?: string
   detail?: string
+  warning?: string
+  warningDetail?: string
   attempts?: number
   version?: {
     version: string
@@ -88,6 +94,56 @@ function summarizeOutput(output: string, max = 240) {
   return compact.length > max ? `${compact.slice(0, max)}...` : compact
 }
 
+function getEnvValue(env: NodeJS.ProcessEnv, key: string) {
+  const direct = env[key]
+  if (typeof direct === 'string' && direct.length > 0) {
+    return direct
+  }
+
+  const matchedKey = Object.keys(env).find(envKey => envKey.toLowerCase() === key.toLowerCase())
+  if (!matchedKey) {
+    return undefined
+  }
+
+  const matchedValue = env[matchedKey]
+  return typeof matchedValue === 'string' && matchedValue.length > 0 ? matchedValue : undefined
+}
+
+function getPathEnv(env: NodeJS.ProcessEnv = process.env) {
+  return getEnvValue(env, 'PATH')
+}
+
+function withNormalizedPathEnv(env: NodeJS.ProcessEnv, pathValue: string) {
+  const normalizedEnv: NodeJS.ProcessEnv = {}
+
+  for (const [key, value] of Object.entries(env)) {
+    if (key.toLowerCase() === 'path') {
+      continue
+    }
+    normalizedEnv[key] = value
+  }
+
+  normalizedEnv[process.platform === 'win32' ? 'Path' : 'PATH'] = pathValue
+  return normalizedEnv
+}
+
+async function initializeRuntimeEnv() {
+  const runtimePath = buildRuntimePath()
+
+  if (process.platform === 'win32') {
+    resolvedRuntimeEnv = withNormalizedPathEnv(process.env, runtimePath)
+    log.info('[RUNTIME ENV READY]', { path: getPathEnv(resolvedRuntimeEnv) })
+    return
+  }
+
+  const shellEnvironment = await shellEnv()
+  resolvedRuntimeEnv = withNormalizedPathEnv({
+    ...process.env,
+    ...shellEnvironment
+  }, buildRuntimePath(getPathEnv(shellEnvironment)))
+  log.info('[RUNTIME ENV READY]', { path: getPathEnv(resolvedRuntimeEnv) })
+}
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1040,
@@ -122,13 +178,19 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
-  createWindow()
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
+  initializeRuntimeEnv()
+    .catch((error) => {
+      log.warn('Failed to initialize runtime env:', error)
+    })
+    .finally(() => {
       createWindow()
-    }
-  })
+
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+          createWindow()
+        }
+      })
+    })
 })
 
 app.on('window-all-closed', () => {
@@ -201,8 +263,8 @@ ipcMain.handle('get-runtime-status', async () => {
 
 ipcMain.handle('install-openclaw', async (event): Promise<InstallResult> => {
   let attempts = 0
-
-  while (attempts < 3) {
+  const retry = 1;
+  while (attempts < retry) {
     attempts += 1
     log.info(`[INSTALL ATTEMPT] ${attempts}`)
 
@@ -219,7 +281,7 @@ ipcMain.handle('install-openclaw', async (event): Promise<InstallResult> => {
       const translated = translateInstallError(rawMessage)
       log.error(`Install failed on attempt ${attempts}:`, error)
 
-      if (attempts >= 3 || !isRecoverableInstallError(rawMessage)) {
+      if (attempts >= retry || !isRecoverableInstallError(rawMessage)) {
         return {
           success: false,
           error: translated.userMessage,
@@ -304,15 +366,31 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     await runGlobalCommand(getCommandPath(runtimeAfterPnpm.pnpm, 'pnpm'), ['add', '-g', 'openclaw@latest'], getPackageManagerEnv())
     logStepDone('install-openclaw-package')
 
+    let onboardWarning: { warning: string; warningDetail: string } | null = null
     logStepStart('run-openclaw-onboard')
     sendProgress(event, 'finalizing', 78, '正在执行 OpenClaw 初始化')
     const runtimeAfterInstallCommand = await getRuntimeStatus()
-    await runCommand(
-      getCommandPath(runtimeAfterInstallCommand.openclaw, 'openclaw'),
-      getDefaultOnboardArgs(),
-      getPackageManagerEnv()
-    )
-    logStepDone('run-openclaw-onboard')
+
+    try {
+      await runCommand(
+        getCommandPath(runtimeAfterInstallCommand.openclaw, 'openclaw'),
+        getDefaultOnboardArgs(),
+        getPackageManagerEnv()
+      )
+      logStepDone('run-openclaw-onboard')
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (process.platform === 'win32' && isWindowsGatewayInstallFailure(message)) {
+        onboardWarning = {
+          warning: 'OpenClaw 已安装，但后台服务未启用。',
+          warningDetail: 'Windows 原生环境下后台服务注册失败。你仍然可以继续使用 OpenClaw。请先在终端执行 `openclaw` 启动，或执行 `openclaw gateway run` 前台运行网关；如需后台服务，请以管理员身份重试，或改用 WSL2。'
+        }
+        log.warn('[STEP WARN] run-openclaw-onboard', { message })
+        sendProgress(event, 'finalizing', 92, 'OpenClaw 已安装，后台服务未启用')
+      } else {
+        throw error
+      }
+    }
 
     logStepStart('verify-openclaw')
     const runtimeAfterInstall = await getRuntimeStatus()
@@ -324,6 +402,8 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     sendProgress(event, 'completed', 100, '安装完成，openclaw 和 daemon 已准备就绪')
     return {
       success: true,
+      warning: onboardWarning?.warning,
+      warningDetail: onboardWarning?.warningDetail,
       version: {
         version: runtimeAfterInstall.openclaw.version || 'latest',
         installDate: new Date().toISOString(),
@@ -488,35 +568,36 @@ async function getCommandStatus(command: string, versionArgs: string[]): Promise
   }
 }
 
-function whichCommand(command: string): Promise<string | null> {
-  return new Promise((resolve) => {
-    const locator = process.platform === 'win32' ? 'where' : 'which'
-    exec(`${locator} ${command}`, (error, stdout) => {
-      if (error || !stdout.trim()) {
-        const fallback = getKnownCommandPath(command)
-        resolve(fallback)
-        return
-      }
+async function whichCommand(command: string): Promise<string | null> {
+  const env = withNormalizedPathEnv(resolvedRuntimeEnv, buildRuntimePath())
+  const shellCommand = getShellCommand(command)
 
-      const firstLine = stdout.split(/\r?\n/).find(Boolean)?.trim() || null
-      resolve(normalizeCommandPath(firstLine, command))
+  try {
+    execSync(`${shellCommand} --version`, {
+      encoding: 'utf8',
+      env,
+      windowsHide: true,
+      stdio: 'pipe'
     })
-  })
+
+    return getKnownCommandPath(command) || shellCommand
+  } catch {
+    return getKnownCommandPath(command)
+  }
 }
 
 function runCommand(command: string, args: string[], extraEnv: Record<string, string> = {}): Promise<string> {
-  const env = {
-    ...process.env,
-    ...extraEnv,
-    PATH: buildRuntimePath(extraEnv.PATH)
-  }
+  const env = withNormalizedPathEnv({
+    ...resolvedRuntimeEnv,
+    ...extraEnv
+  }, buildRuntimePath(getPathEnv(extraEnv)))
   const displayCommand = [command, ...args].join(' ')
 
   log.info('[COMMAND START]', {
     command,
     args,
     displayCommand,
-    path: env.PATH
+    path: getPathEnv(env)
   })
 
   const run = async () => {
@@ -561,18 +642,17 @@ function runCommand(command: string, args: string[], extraEnv: Record<string, st
 
 function runShellCommand(command: string, extraEnv: Record<string, string> = {}): Promise<string> {
   const shellPath = process.platform === 'win32'
-    ? (process.env.ComSpec || 'cmd.exe')
-    : (process.env.SHELL || '/bin/zsh')
-  const env = {
-    ...process.env,
-    ...extraEnv,
-    PATH: buildRuntimePath(extraEnv.PATH)
-  }
+    ? (resolvedRuntimeEnv.ComSpec || process.env.ComSpec || 'cmd.exe')
+    : (resolvedRuntimeEnv.SHELL || process.env.SHELL || '/bin/zsh')
+  const env = withNormalizedPathEnv({
+    ...resolvedRuntimeEnv,
+    ...extraEnv
+  }, buildRuntimePath(getPathEnv(extraEnv)))
 
   log.info('[SHELL START]', {
     shellPath,
     command,
-    path: env.PATH
+    path: getPathEnv(env)
   })
 
   const run = async () => {
@@ -877,13 +957,28 @@ function getKnownCommandPath(command: string): string | null {
   }
 
   if (process.platform === 'win32') {
-    const base = process.env['ProgramFiles'] || 'C:\\Program Files'
-    const x86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
+    const base = getEnvValue(process.env, 'ProgramFiles') || 'C:\\Program Files'
+    const x86 = getEnvValue(process.env, 'ProgramFiles(x86)') || 'C:\\Program Files (x86)'
+    const appData = getEnvValue(process.env, 'APPDATA') || join(os.homedir(), 'AppData', 'Roaming')
+    const localAppData = getEnvValue(process.env, 'LOCALAPPDATA') || join(os.homedir(), 'AppData', 'Local')
+    const pnpmHome = getPnpmHomeDir()
     const winCandidates: Record<string, string[]> = {
       node: [join(base, 'nodejs', 'node.exe'), join(x86, 'nodejs', 'node.exe')],
       npm: [join(base, 'nodejs', 'npm.cmd'), join(x86, 'nodejs', 'npm.cmd')],
-      pnpm: [join(base, 'nodejs', 'pnpm.cmd'), join(x86, 'nodejs', 'pnpm.cmd')],
-      openclaw: [join(base, 'nodejs', 'openclaw.cmd'), join(x86, 'nodejs', 'openclaw.cmd')]
+      pnpm: [
+        join(appData, 'npm', 'pnpm.cmd'),
+        join(localAppData, 'pnpm', 'pnpm.cmd'),
+        join(pnpmHome, 'pnpm.cmd'),
+        join(base, 'nodejs', 'pnpm.cmd'),
+        join(x86, 'nodejs', 'pnpm.cmd')
+      ],
+      openclaw: [
+        join(appData, 'npm', 'openclaw.cmd'),
+        join(localAppData, 'pnpm', 'openclaw.cmd'),
+        join(pnpmHome, 'openclaw.cmd'),
+        join(base, 'nodejs', 'openclaw.cmd'),
+        join(x86, 'nodejs', 'openclaw.cmd')
+      ]
     }
 
     return winCandidates[command]?.find(path => fs.existsSync(path)) || null
@@ -937,16 +1032,8 @@ function normalizeCommandPath(commandPath: string | null, commandName: string) {
 }
 
 function isNodeVersionSupported(version: string | null) {
-  if (!version) {
-    return false
-  }
-
-  const normalized = normalizeSemver(version)
-  if (!normalized) {
-    return false
-  }
-
-  return compareVersions(normalized, OPENCLAW_REQUIRED_NODE_VERSION) >= 0
+  const normalized = normalizeVersion(version)
+  return normalized ? gte(normalized, OPENCLAW_REQUIRED_NODE_VERSION) : false
 }
 
 function isRecoverableInstallError(message: string) {
@@ -959,8 +1046,13 @@ function isRecoverableInstallError(message: string) {
     'econn',
     'registry',
     'pnpm',
+    'err_pnpm_no_global_bin_dir',
+    'global-bin-dir',
+    'pnpm_home',
     'node.js 自动安装未完成',
     'openclaw 命令未成功安装',
+    'gateway service install failed',
+    'schtasks create failed',
     '需要 node.js 22',
     'not detected',
     '下载'
@@ -978,6 +1070,13 @@ function isPermissionError(message: string) {
     '拒绝访问',
     '权限'
   ].some(pattern => lowered.includes(pattern))
+}
+
+function isWindowsGatewayInstallFailure(message: string) {
+  const lowered = message.toLowerCase()
+  return lowered.includes('gateway service install failed')
+    || lowered.includes('schtasks create failed')
+    || lowered.includes('gateway service install did not complete successfully')
 }
 
 async function applyAutoRepair(message: string) {
@@ -1005,6 +1104,27 @@ async function applyAutoRepair(message: string) {
 function translateInstallError(message: string) {
   const lowered = message.toLowerCase()
 
+  if (isWindowsGatewayInstallFailure(message)) {
+    return {
+      userMessage: 'OpenClaw 已安装，但 Windows 后台服务注册失败。',
+      detail: `${message}\n\n你可以先执行 \`openclaw\` 启动，或执行 \`openclaw gateway run\` 前台运行网关。若需后台服务，请以管理员身份重试，或改用 WSL2。`
+    }
+  }
+
+  if (lowered.includes('config overwrite')) {
+    return {
+      userMessage: '检测到已有 OpenClaw 配置文件，本次安装覆盖了旧配置并保留了备份。',
+      detail: message
+    }
+  }
+
+  if (lowered.includes('err_pnpm_no_global_bin_dir') || lowered.includes('global-bin-dir') || lowered.includes('pnpm_home')) {
+    return {
+      userMessage: 'pnpm 全局目录未准备完成，安装器正在尝试自动补齐。',
+      detail: message
+    }
+  }
+
   if (lowered.includes('eacces') || lowered.includes('permission denied') || lowered.includes('administrator privileges')) {
     return {
       userMessage: '需要系统权限才能继续安装，请在弹出的系统授权窗口中点击允许。',
@@ -1012,30 +1132,37 @@ function translateInstallError(message: string) {
     }
   }
 
-  if (lowered.includes('econn') || lowered.includes('network') || lowered.includes('timed out') || lowered.includes('下载')) {
+  if (lowered.includes('econn') || lowered.includes('network') || lowered.includes('timed out') || lowered.includes('下载') || lowered.includes('tls')) {
     return {
       userMessage: '网络连接异常，安装器已尝试自动修复镜像并重试。',
       detail: message
     }
   }
 
-  if (lowered.includes('node.js')) {
+  if (lowered.includes('node.js') || lowered.includes('requires node >=')) {
     return {
       userMessage: `Node.js 版本不符合要求，安装器会尝试自动升级到 ${OPENCLAW_REQUIRED_NODE_VERSION} 或更高版本。`,
       detail: message
     }
   }
 
+  if (lowered.includes('127.0.0.1:1234') || lowered.includes('custom-base-url') || lowered.includes('connection refused')) {
+    return {
+      userMessage: '本地模型接口不可用，OpenClaw 无法完成本地模型初始化。',
+      detail: `${message}\n\n当前默认地址是 http://127.0.0.1:1234/v1。`
+    }
+  }
+
   if (lowered.includes('pnpm')) {
     return {
-      userMessage: 'pnpm 安装或调用失败，请重试。',
+      userMessage: 'pnpm 安装或调用失败，请检查全局安装环境。',
       detail: message
     }
   }
 
-  if (lowered.includes('openclaw')) {
+  if (lowered.includes('openclaw') || lowered.includes('onboard')) {
     return {
-      userMessage: 'OpenClaw 安装或初始化没有完成。',
+      userMessage: 'OpenClaw 初始化没有完成，请查看详细日志。',
       detail: message
     }
   }
@@ -1129,31 +1256,36 @@ async function ensurePnpmHomeConfigured(pnpmPath: string | null) {
 }
 
 function buildRuntimePath(extraPath?: string) {
-  const pathSegments = [extraPath, process.env.PATH].filter(Boolean)
-  return pathSegments.join(process.platform === 'win32' ? ';' : ':')
+  const delimiter = process.platform === 'win32' ? ';' : ':'
+  const rawSegments = [
+    extraPath,
+    getPathEnv(resolvedRuntimeEnv),
+    getPathEnv(process.env)
+  ]
+    .filter(Boolean)
+    .flatMap(value => value!.split(delimiter))
+    .map(segment => segment.trim())
+    .filter(Boolean)
+
+  const seen = new Set<string>()
+  const deduped = rawSegments.filter(segment => {
+    const key = process.platform === 'win32' ? segment.toLowerCase() : segment
+    if (seen.has(key)) {
+      return false
+    }
+    seen.add(key)
+    return true
+  })
+
+  return deduped.join(delimiter)
 }
 
-function normalizeSemver(version: string) {
-  const matched = version.trim().match(/v?(\d+)\.(\d+)\.(\d+)/)
-  if (!matched) {
+function normalizeVersion(version: string | null) {
+  if (!version) {
     return null
   }
 
-  return `${matched[1]}.${matched[2]}.${matched[3]}`
-}
-
-function compareVersions(left: string, right: string) {
-  const leftParts = left.split('.').map(Number)
-  const rightParts = right.split('.').map(Number)
-
-  for (let index = 0; index < 3; index += 1) {
-    const diff = (leftParts[index] || 0) - (rightParts[index] || 0)
-    if (diff !== 0) {
-      return diff
-    }
-  }
-
-  return 0
+  return coerce(version)?.version || null
 }
 
 function buildNodeVersionError(version: string | null, executablePath: string | null) {
@@ -1175,7 +1307,7 @@ function getNvmCommandPath(command: string) {
 
     const versions = fs.readdirSync(versionsDir)
       .filter(name => /^v\d+\.\d+\.\d+$/.test(name))
-      .sort((left, right) => compareVersions(left.replace(/^v/, ''), right.replace(/^v/, '')))
+      .sort((left, right) => compare(left.replace(/^v/, ''), right.replace(/^v/, '')))
 
     for (let index = versions.length - 1; index >= 0; index -= 1) {
       const candidate = join(versionsDir, versions[index], 'bin', command)
@@ -1224,32 +1356,38 @@ async function tryUpgradeNodeWithManager(event: Electron.IpcMainInvokeEvent | nu
 }
 
 async function runCommandAsAdministrator(command: string, args: string[], extraEnv: Record<string, string> = {}) {
-  if (process.platform === 'darwin') {
-    const shellCommand = buildShellCommand(command, args, extraEnv)
-    const script = `do shell script "${escapeAppleScriptString(shellCommand)}" with administrator privileges`
-    return runCommand('osascript', ['-e', script], extraEnv)
+  if (process.platform !== 'darwin' && process.platform !== 'win32') {
+    throw new Error('当前系统不支持自动请求管理员权限。')
   }
 
-  if (process.platform === 'win32') {
-    const powerShellScript = [
-      '$envMap = @{',
-      ...Object.entries({ ...extraEnv, PATH: buildRuntimePath(extraEnv.PATH) }).map(([key, value]) => `  '${escapePowerShellSingleQuoted(key)}'='${escapePowerShellSingleQuoted(value)}'`),
-      '}',
-      `$psi = New-Object System.Diagnostics.ProcessStartInfo`,
-      `$psi.FileName = '${escapePowerShellSingleQuoted(command)}'`,
-      `$psi.Arguments = '${escapePowerShellSingleQuoted(args.map(escapeWindowsArgument).join(' '))}'`,
-      `$psi.Verb = 'runas'`,
-      `$psi.UseShellExecute = $true`,
-      'foreach ($entry in $envMap.GetEnumerator()) { [Environment]::SetEnvironmentVariable($entry.Key, $entry.Value, "Process") }',
-      '$process = [System.Diagnostics.Process]::Start($psi)',
-      '$process.WaitForExit()',
-      'if ($process.ExitCode -ne 0) { exit $process.ExitCode }'
-    ].join('; ')
+  const elevatedCommand = buildElevatedCommand(command, args, extraEnv)
+  log.info('[ELEVATED START]', { command: elevatedCommand })
 
-    return runCommand('powershell.exe', ['-NoProfile', '-Command', powerShellScript], extraEnv)
-  }
+  return new Promise((resolve, reject) => {
+    sudoPrompt.exec(
+      elevatedCommand,
+      { name: '小龙虾安装器' },
+      (error, stdout, stderr) => {
+        if (error) {
+          log.error('[ELEVATED FAIL]', {
+            command: elevatedCommand,
+            stdout: summarizeOutput(stdout || ''),
+            stderr: summarizeOutput(stderr || ''),
+            message: error.message
+          })
+          reject(new Error((stderr || stdout || error.message).trim()))
+          return
+        }
 
-  throw new Error('当前系统不支持自动请求管理员权限。')
+        log.info('[ELEVATED DONE]', {
+          command: elevatedCommand,
+          stdout: summarizeOutput(stdout || ''),
+          stderr: summarizeOutput(stderr || '')
+        })
+        resolve((stdout || stderr || '').trim())
+      }
+    )
+  })
 }
 
 function buildShellCommand(command: string, args: string[], extraEnv: Record<string, string>) {
@@ -1265,18 +1403,24 @@ function shellQuote(value: string) {
   return `'${value.replace(/'/g, `'\\''`)}'`
 }
 
-function escapeAppleScriptString(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')
-}
-
-function escapePowerShellSingleQuoted(value: string) {
-  return value.replace(/'/g, "''")
-}
-
-function escapeWindowsArgument(value: string) {
+function quoteWindowsArgument(value: string) {
   if (!/[ \t"]/u.test(value)) {
     return value
   }
 
-  return `"${value.replace(/"/g, '\\"')}"`
+  return `"${value.replace(/"/g, '""')}"`
+}
+
+function buildElevatedCommand(command: string, args: string[], extraEnv: Record<string, string>) {
+  const env = { ...extraEnv, PATH: buildRuntimePath(extraEnv.PATH) }
+
+  if (process.platform === 'win32') {
+    const envAssignments = Object.entries(env)
+      .map(([key, value]) => `set "${key}=${value}"`)
+      .join(' && ')
+    const commandPart = [command, ...args].map(quoteWindowsArgument).join(' ')
+    return [envAssignments, commandPart].filter(Boolean).join(' && ')
+  }
+
+  return buildShellCommand(command, args, env)
 }

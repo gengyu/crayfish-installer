@@ -26,8 +26,10 @@ interface InstallState {
   progress: number
   installPath: string
   error: string | null
+  warning: string | null
   detail: string
   errorDetail: string | null
+  warningDetail: string | null
   attempts: number
 }
 
@@ -46,8 +48,10 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     progress: 0,
     installPath: '',
     error: null,
+    warning: null,
     detail: '准备开始',
     errorDetail: null,
+    warningDetail: null,
     attempts: 0
   })
   const [dependencies, setDependencies] = useState<Record<string, boolean> | null>(null)
@@ -136,7 +140,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
 
     activeOperationRef.current = 'install'
     setIsSubmitting(true)
-    setState(prev => ({ ...prev, stage: 'checking', progress: 0, error: null, detail: '正在检查安装环境' }))
+    setState(prev => ({ ...prev, stage: 'checking', progress: 0, error: null, warning: null, detail: '正在检查安装环境', errorDetail: null, warningDetail: null }))
 
     try {
       const result = await window.electronAPI.installOpenClaw(state.installPath)
@@ -146,8 +150,10 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
           ...prev, 
           stage: 'error', 
           error: result.error || '安装失败',
+          warning: null,
           detail: '安装没有完成',
           errorDetail: result.detail || null,
+          warningDetail: null,
           attempts: result.attempts || 1
         }))
       } else {
@@ -158,7 +164,9 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
           stage: installed ? 'completed' : 'idle',
           progress: installed ? 100 : 0,
           detail: installed ? '已经可以开始使用' : '安装已结束',
+          warning: result.warning || null,
           errorDetail: null,
+          warningDetail: result.warningDetail || null,
           attempts: result.attempts || 1
         }))
         setInstallDetected(installed)
@@ -181,11 +189,12 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     setState(prev => ({
       ...prev,
       stage: 'uninstalling',
-      progress: 0,
-      error: null,
-      detail: '正在移除已安装文件',
-      errorDetail: null
-    }))
+        progress: 0,
+        error: null,
+        warning: null,
+        detail: '正在移除已安装文件',
+        errorDetail: null
+      }))
 
     try {
       const result = await window.electronAPI.uninstallOpenClaw(targetPath)
@@ -194,6 +203,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
           ...prev,
           stage: 'error',
           error: result.error || '卸载失败',
+          warning: null,
           detail: '卸载没有完成'
         }))
         return
@@ -204,9 +214,11 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
         stage: 'idle',
         progress: 0,
         error: null,
+        warning: null,
         detail: '已卸载，可以重新安装',
         installPath: targetPath,
         errorDetail: null,
+        warningDetail: null,
         attempts: 0
       }))
 
@@ -372,6 +384,14 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
                 </div>
               ) : null}
 
+              {state.warning && !state.error ? (
+                <div className="state-error-box">
+                  <p className="state-error-title">{state.warning}</p>
+                  <p className="state-error-text">OpenClaw 主程序已经安装完成。</p>
+                  <p className="state-error-hint">你可以先执行 `openclaw` 启动，或执行 `openclaw gateway run` 前台运行网关。</p>
+                </div>
+              ) : null}
+
               {(state.stage === 'completed' || (isInstalled && !isBusy && !state.error)) ? (
                 <div className="state-success-box">
                   <p>OpenClaw 已安装完成，可以直接开始使用。</p>
@@ -411,6 +431,13 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
                 <div className="details-error">
                   <div className="detail-error-title">安装错误</div>
                   <div className="detail-error-message">{state.errorDetail}</div>
+                </div>
+              ) : null}
+
+              {state.warningDetail && !state.error ? (
+                <div className="details-error">
+                  <div className="detail-error-title">安装提示</div>
+                  <div className="detail-error-message">{state.warningDetail}</div>
                 </div>
               ) : null}
 

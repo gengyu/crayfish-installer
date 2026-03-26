@@ -26,7 +26,7 @@ export interface ElectronAPI {
   }>
   checkDiskSpace: () => Promise<{ available: boolean; path: string }>
   selectInstallPath: () => Promise<string | null>
-  installOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string; detail?: string; attempts?: number; installPath?: string; version?: { version: string; installDate: string; platform: string; arch: string } }>
+  installOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string; detail?: string; warning?: string; warningDetail?: string; attempts?: number; installPath?: string; version?: { version: string; installDate: string; platform: string; arch: string } }>
   uninstallOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string }>
   launchOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string }>
   openDirectory: (dirPath: string) => Promise<void>
