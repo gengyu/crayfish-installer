@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { SystemInfo } from './types'
 import Installer from './components/Installer'
+import OpenClawSettingsPage from './components/OpenClawSettingsPage'
 
 function App() {
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -19,27 +20,33 @@ function App() {
     ? `${systemInfo.platform} (${systemInfo.arch}) - ${systemInfo.totalMemory} 内存`
     : '检测中...'
 
+  const showSettings = Boolean(existingInstall?.exists)
+
   return (
-    <div className="flex min-h-screen flex-col">
-      <main className="flex flex-1 items-center justify-center p-4">
-        <Installer systemInfo={systemInfo} existingInstall={existingInstall} onInstallationChanged={refreshInstallation} />
-      </main>
-      <footer className="px-4 pb-3 text-center text-xs text-slate-500">
-        <p>平台: {platformDisplay}</p>
-        <p>
-          <a 
-            href="#" 
-            className="text-slate-600 transition hover:underline"
-            onClick={(e) => {
-              e.preventDefault()
-              window.open('https://github.com/openclaw/openclaw', '_blank')
-            }}
-          >
-            查看 OpenClaw 项目源码
-          </a>
-        </p>
-      </footer>
-    </div>
+    showSettings ? (
+      <OpenClawSettingsPage existingInstall={existingInstall} />
+    ) : (
+      <div className="flex min-h-screen flex-col">
+        <main className="flex flex-1 items-center justify-center p-4">
+          <Installer systemInfo={systemInfo} existingInstall={existingInstall} onInstallationChanged={refreshInstallation} />
+        </main>
+        <footer className="px-4 pb-3 text-center text-xs text-slate-500">
+          <p>平台: {platformDisplay}</p>
+          <p>
+            <a 
+              href="#" 
+              className="text-slate-600 transition hover:underline"
+              onClick={(e) => {
+                e.preventDefault()
+                window.open('https://github.com/openclaw/openclaw', '_blank')
+              }}
+            >
+              查看 OpenClaw 项目源码
+            </a>
+          </p>
+        </footer>
+      </div>
+    )
   )
 }
 

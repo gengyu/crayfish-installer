@@ -15,6 +15,7 @@
   "dependencies": {
     "electron-log": "^5.0.1",
     "execa": "^9.6.0",
+    "json5": "^2.2.3",
     "semver": "^7.7.2",
     "shell-env": "^4.0.1",
     "sudo-prompt": "^9.2.1",

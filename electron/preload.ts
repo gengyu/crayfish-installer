@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { OpenClawSettings } from '../src/types'
 
 export interface SystemInfo {
   platform: string
@@ -31,6 +32,8 @@ export interface ElectronAPI {
   uninstallOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string }>
   launchOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string }>
   openDirectory: (dirPath: string) => Promise<void>
+  getOpenClawSettings: () => Promise<OpenClawSettings>
+  saveOpenClawSettings: (settings: OpenClawSettings) => Promise<{ success: boolean; configPath: string }>
   onInstallProgress: (callback: (data: { stage: string; progress: number; detail?: string }) => void) => void
   removeInstallProgressListener: () => void
 }
@@ -47,6 +50,8 @@ const api: ElectronAPI = {
   uninstallOpenClaw: (installPath: string) => ipcRenderer.invoke('uninstall-openclaw', installPath),
   launchOpenClaw: (installPath: string) => ipcRenderer.invoke('launch-openclaw', installPath),
   openDirectory: (dirPath: string) => ipcRenderer.invoke('open-directory', dirPath),
+  getOpenClawSettings: () => ipcRenderer.invoke('get-openclaw-settings'),
+  saveOpenClawSettings: (settings: OpenClawSettings) => ipcRenderer.invoke('save-openclaw-settings', settings),
   onInstallProgress: (callback) => {
     ipcRenderer.on('install-progress', (_: unknown, data: { stage: string; progress: number; detail?: string }) => callback(data))
   },

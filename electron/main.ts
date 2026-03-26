@@ -6,11 +6,13 @@ import fs from 'fs'
 import os from 'os'
 import https from 'https'
 import net from 'net'
+import JSON5 from 'json5'
 import log from 'electron-log'
 import { execa, execaCommand } from 'execa'
 import { shellEnv } from 'shell-env'
 import { coerce, compare, gte } from 'semver'
 import sudoPrompt from 'sudo-prompt'
+import type { OpenClawSettings } from '../src/types'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -68,11 +70,19 @@ interface InstallResult {
   }
 }
 
+type OpenClawChannelType = OpenClawSettings['channelType']
+
+interface OpenClawConfigObject {
+  [key: string]: unknown
+}
+
 const NODE_LTS_BASE_URL = 'https://nodejs.org/dist/latest-v22.x/'
 const OPENCLAW_REQUIRED_NODE_VERSION = '22.16.0'
 const CN_NODE_MIRROR = 'https://npmmirror.com/mirrors/node'
 const NPM_REGISTRY = 'https://registry.npmmirror.com'
 const OPENCLAW_GATEWAY_PORT = 18789
+const OPENCLAW_CONFIG_DIR = join(os.homedir(), '.openclaw')
+const OPENCLAW_CONFIG_PATH = join(OPENCLAW_CONFIG_DIR, 'openclaw.json')
 
 function logStepStart(step: string, detail?: unknown) {
   if (detail === undefined) {
@@ -521,6 +531,281 @@ ipcMain.handle('launch-openclaw', async () => {
 ipcMain.handle('open-directory', async (_event, dirPath: string) => {
   shell.openPath(dirPath)
 })
+
+ipcMain.handle('get-openclaw-settings', async () => {
+  return readOpenClawSettings()
+})
+
+ipcMain.handle('save-openclaw-settings', async (_event, settings: OpenClawSettings) => {
+  const validatedSettings = normalizeOpenClawSettings(settings)
+  const currentConfig = readOpenClawConfigFile()
+  const nextConfig = applyOpenClawSettingsToConfig(currentConfig, validatedSettings)
+
+  fs.mkdirSync(OPENCLAW_CONFIG_DIR, { recursive: true })
+  fs.writeFileSync(OPENCLAW_CONFIG_PATH, `${JSON.stringify(nextConfig, null, 2)}\n`, 'utf8')
+
+  return {
+    success: true,
+    configPath: OPENCLAW_CONFIG_PATH
+  }
+})
+
+function getDefaultOpenClawSettings(): OpenClawSettings {
+  return {
+    configPath: OPENCLAW_CONFIG_PATH,
+    configDir: OPENCLAW_CONFIG_DIR,
+    modelProviderId: 'custom-openai',
+    modelBaseUrl: 'http://127.0.0.1:1234/v1',
+    modelApiKey: 'local',
+    modelApi: 'openai-responses',
+    modelId: 'minimax-m2.5-gs32',
+    fallbackModelId: '',
+    channelType: 'telegram',
+    dmPolicy: 'pairing',
+    groupPolicy: 'disabled',
+    telegramBotToken: '',
+    telegramRequireMention: true,
+    discordBotToken: '',
+    slackBotToken: '',
+    slackAppToken: '',
+    slackUserToken: '',
+    slackUserTokenReadOnly: true
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+}
+
+function readString(value: unknown, fallback = '') {
+  return typeof value === 'string' ? value : fallback
+}
+
+function readBoolean(value: unknown, fallback = false) {
+  return typeof value === 'boolean' ? value : fallback
+}
+
+function readStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+}
+
+function isChannelType(value: string): value is OpenClawChannelType {
+  return ['telegram', 'discord', 'slack', 'none'].includes(value)
+}
+
+function readOpenClawConfigFile(): OpenClawConfigObject {
+  if (!fs.existsSync(OPENCLAW_CONFIG_PATH)) {
+    return {}
+  }
+
+  const raw = fs.readFileSync(OPENCLAW_CONFIG_PATH, 'utf8').trim()
+  if (!raw) {
+    return {}
+  }
+
+  try {
+    const parsed = JSON5.parse(raw)
+    return asRecord(parsed)
+  } catch (error) {
+    log.warn('Failed to parse openclaw config, falling back to defaults:', error)
+    return {}
+  }
+}
+
+function normalizeOpenClawSettings(settings: OpenClawSettings): OpenClawSettings {
+  const defaults = getDefaultOpenClawSettings()
+
+  return {
+    ...defaults,
+    ...settings,
+    configPath: OPENCLAW_CONFIG_PATH,
+    configDir: OPENCLAW_CONFIG_DIR,
+    modelProviderId: (settings.modelProviderId || defaults.modelProviderId).trim(),
+    modelBaseUrl: (settings.modelBaseUrl || defaults.modelBaseUrl).trim(),
+    modelApiKey: (settings.modelApiKey || '').trim(),
+    modelId: (settings.modelId || defaults.modelId).trim(),
+    fallbackModelId: (settings.fallbackModelId || '').trim(),
+    telegramBotToken: (settings.telegramBotToken || '').trim(),
+    discordBotToken: (settings.discordBotToken || '').trim(),
+    slackBotToken: (settings.slackBotToken || '').trim(),
+    slackAppToken: (settings.slackAppToken || '').trim(),
+    slackUserToken: (settings.slackUserToken || '').trim(),
+    channelType: isChannelType(settings.channelType) ? settings.channelType : defaults.channelType
+  }
+}
+
+function readOpenClawSettings(): OpenClawSettings {
+  const defaults = getDefaultOpenClawSettings()
+  const config = readOpenClawConfigFile()
+  const agents = asRecord(config.agents)
+  const defaultsSection = asRecord(agents.defaults)
+  const modelSection = asRecord(defaultsSection.model)
+  const primaryModel = readString(modelSection.primary)
+  const fallbackModels = readStringArray(modelSection.fallbacks)
+  const [providerFromPrimary, modelIdFromPrimary] = primaryModel.includes('/')
+    ? primaryModel.split(/\/(.+)/, 2)
+    : [defaults.modelProviderId, defaults.modelId]
+
+  const models = asRecord(config.models)
+  const providers = asRecord(models.providers)
+  const providerConfig = asRecord(providers[providerFromPrimary || defaults.modelProviderId])
+
+  const channels = asRecord(config.channels)
+  const telegramConfig = asRecord(channels.telegram)
+  const telegramGroups = asRecord(telegramConfig.groups)
+  const telegramWildcardGroup = asRecord(telegramGroups['*'])
+  const discordConfig = asRecord(channels.discord)
+  const slackConfig = asRecord(channels.slack)
+
+  const detectedChannelType: OpenClawChannelType = telegramConfig.enabled === true
+    ? 'telegram'
+    : discordConfig.enabled === true
+      ? 'discord'
+      : slackConfig.enabled === true
+        ? 'slack'
+        : defaults.channelType
+
+  return normalizeOpenClawSettings({
+    ...defaults,
+    configPath: OPENCLAW_CONFIG_PATH,
+    configDir: OPENCLAW_CONFIG_DIR,
+    modelProviderId: providerFromPrimary || defaults.modelProviderId,
+    modelBaseUrl: readString(providerConfig.baseUrl, defaults.modelBaseUrl),
+    modelApiKey: readString(providerConfig.apiKey, defaults.modelApiKey),
+    modelApi: (readString(providerConfig.api, defaults.modelApi) as OpenClawSettings['modelApi']),
+    modelId: modelIdFromPrimary || defaults.modelId,
+    fallbackModelId: fallbackModels[0] || '',
+    channelType: detectedChannelType,
+    dmPolicy: (readString(
+      detectedChannelType === 'telegram'
+        ? telegramConfig.dmPolicy
+        : detectedChannelType === 'discord'
+          ? discordConfig.dmPolicy
+          : slackConfig.dmPolicy,
+      defaults.dmPolicy
+    ) as OpenClawSettings['dmPolicy']),
+    groupPolicy: (readString(
+      detectedChannelType === 'telegram'
+        ? telegramConfig.groupPolicy
+        : detectedChannelType === 'discord'
+          ? discordConfig.groupPolicy
+          : slackConfig.groupPolicy,
+      defaults.groupPolicy
+    ) as OpenClawSettings['groupPolicy']),
+    telegramBotToken: readString(telegramConfig.botToken),
+    telegramRequireMention: readBoolean(telegramWildcardGroup.requireMention, defaults.telegramRequireMention),
+    discordBotToken: readString(discordConfig.token),
+    slackBotToken: readString(slackConfig.botToken),
+    slackAppToken: readString(slackConfig.appToken),
+    slackUserToken: readString(slackConfig.userToken),
+    slackUserTokenReadOnly: readBoolean(slackConfig.userTokenReadOnly, defaults.slackUserTokenReadOnly)
+  })
+}
+
+function buildManagedProviderConfig(settings: OpenClawSettings) {
+  return {
+    api: settings.modelApi,
+    baseUrl: settings.modelBaseUrl,
+    apiKey: settings.modelApiKey,
+    models: [
+      { id: settings.modelId }
+    ]
+  }
+}
+
+function buildTelegramChannelConfig(settings: OpenClawSettings) {
+  return {
+    enabled: settings.channelType === 'telegram',
+    botToken: settings.telegramBotToken,
+    dmPolicy: settings.dmPolicy,
+    groupPolicy: settings.groupPolicy,
+    groups: {
+      '*': {
+        requireMention: settings.telegramRequireMention
+      }
+    }
+  }
+}
+
+function buildDiscordChannelConfig(settings: OpenClawSettings) {
+  return {
+    enabled: settings.channelType === 'discord',
+    token: settings.discordBotToken,
+    dmPolicy: settings.dmPolicy,
+    groupPolicy: settings.groupPolicy
+  }
+}
+
+function buildSlackChannelConfig(settings: OpenClawSettings) {
+  return {
+    enabled: settings.channelType === 'slack',
+    botToken: settings.slackBotToken,
+    appToken: settings.slackAppToken,
+    userToken: settings.slackUserToken,
+    userTokenReadOnly: settings.slackUserTokenReadOnly,
+    dmPolicy: settings.dmPolicy,
+    groupPolicy: settings.groupPolicy
+  }
+}
+
+function applyOpenClawSettingsToConfig(currentConfig: OpenClawConfigObject, settings: OpenClawSettings): OpenClawConfigObject {
+  const providerId = settings.modelProviderId
+  const primaryModel = `${providerId}/${settings.modelId}`
+  const fallbackModels = settings.fallbackModelId.trim() ? [`${providerId}/${settings.fallbackModelId.trim()}`] : []
+
+  const nextConfig = {
+    ...currentConfig,
+    models: {
+      ...asRecord(currentConfig.models),
+      mode: 'merge',
+      providers: {
+        ...asRecord(asRecord(currentConfig.models).providers),
+        [providerId]: {
+          ...asRecord(asRecord(asRecord(currentConfig.models).providers)[providerId]),
+          ...buildManagedProviderConfig(settings)
+        }
+      }
+    },
+    agents: {
+      ...asRecord(currentConfig.agents),
+      defaults: {
+        ...asRecord(asRecord(currentConfig.agents).defaults),
+        model: {
+          primary: primaryModel,
+          ...(fallbackModels.length > 0 ? { fallbacks: fallbackModels } : {})
+        },
+        models: {
+          ...asRecord(asRecord(asRecord(currentConfig.agents).defaults).models),
+          [primaryModel]: {
+            alias: settings.modelId
+          },
+          ...(fallbackModels.length > 0 ? {
+            [fallbackModels[0]]: {
+              alias: settings.fallbackModelId
+            }
+          } : {})
+        }
+      }
+    },
+    channels: {
+      ...asRecord(currentConfig.channels),
+      telegram: {
+        ...asRecord(asRecord(currentConfig.channels).telegram),
+        ...buildTelegramChannelConfig(settings)
+      },
+      discord: {
+        ...asRecord(asRecord(currentConfig.channels).discord),
+        ...buildDiscordChannelConfig(settings)
+      },
+      slack: {
+        ...asRecord(asRecord(currentConfig.channels).slack),
+        ...buildSlackChannelConfig(settings)
+      }
+    }
+  }
+
+  return nextConfig
+}
 
 function sendProgress(
   event: Electron.IpcMainInvokeEvent,
