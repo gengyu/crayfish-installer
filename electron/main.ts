@@ -49,15 +49,34 @@ interface CommandCheckResult {
 }
 
 interface RuntimeStatus {
-  node: CommandCheckResult
-  npm: CommandCheckResult
-  pnpm: CommandCheckResult
-  openclaw: CommandCheckResult
-  gatewayRunning: boolean
+  commands: {
+    node: CommandCheckResult
+    npm: CommandCheckResult
+    pnpm: CommandCheckResult
+    openclaw: CommandCheckResult
+  }
+  gateway: {
+    running: boolean
+    port: number
+  }
   registry: {
     npm: string | null
     pnpm: string | null
   }
+  mirrorRecommended: boolean
+}
+
+interface RuntimeCommandProbe {
+  node: CommandCheckResult
+  npm: CommandCheckResult
+  pnpm: CommandCheckResult
+  openclaw: CommandCheckResult
+}
+
+interface RuntimeProbeResult {
+  commands: RuntimeCommandProbe
+  gatewayRunning: boolean
+  registry: RuntimeStatus['registry']
   mirrorRecommended: boolean
 }
 
@@ -346,10 +365,10 @@ ipcMain.handle('select-install-path', async () => {
 ipcMain.handle('check-existing-installation', async () => {
   const runtime = await getRuntimeStatus()
   return {
-    exists: runtime.openclaw.exists,
-    path: runtime.openclaw.path,
-    version: runtime.openclaw.version ? {
-      version: runtime.openclaw.version,
+    exists: hasOpenClawCommand(runtime),
+    path: runtime.commands.openclaw.path,
+    version: runtime.commands.openclaw.version ? {
+      version: runtime.commands.openclaw.version,
       installDate: new Date().toISOString()
     } : null
   }
@@ -358,10 +377,10 @@ ipcMain.handle('check-existing-installation', async () => {
 ipcMain.handle('check-dependencies', async () => {
   const runtime = await getRuntimeStatus()
   return {
-    node: runtime.node.exists,
-    npm: runtime.npm.exists,
-    pnpm: runtime.pnpm.exists,
-    openclaw: runtime.openclaw.exists,
+    node: runtime.commands.node.exists,
+    npm: runtime.commands.npm.exists,
+    pnpm: runtime.commands.pnpm.exists,
+    openclaw: hasOpenClawCommand(runtime),
     npmRegistryConfigured: runtime.registry.npm === 'https://registry.npmmirror.com',
     pnpmRegistryConfigured: runtime.registry.pnpm === 'https://registry.npmmirror.com'
   }
@@ -427,57 +446,57 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     let runtime = await getRuntimeStatus()
     logStepDone('runtime-check', runtime)
 
-    if (!runtime.node.exists) {
+    if (!runtime.commands.node.exists) {
       logStepStart('install-node-missing')
       sendProgress(event, 'preparing', 14, '未检测到 Node.js，正在下载安装官方 Node.js')
       await installNodeJs(event)
       runtime = await getRuntimeStatus()
-      logStepDone('install-node-missing', runtime.node)
+      logStepDone('install-node-missing', runtime.commands.node)
     }
 
-    if (!runtime.node.exists) {
+    if (!runtime.commands.node.exists) {
       throw new Error('Node.js 自动安装未完成，请检查系统安装权限后重试。')
     }
 
-    if (!isNodeVersionSupported(runtime.node.version)) {
-      logStepStart('upgrade-node-version', runtime.node)
+    if (!isNodeVersionSupported(runtime.commands.node.version)) {
+      logStepStart('upgrade-node-version', runtime.commands.node)
       sendProgress(event, 'preparing', 18, `检测到 Node.js 版本过低，正在升级到 ${OPENCLAW_REQUIRED_NODE_VERSION} 或更高版本`)
       await upgradeNodeJs(event, runtime)
       runtime = await getRuntimeStatus()
-      logStepDone('upgrade-node-version', runtime.node)
+      logStepDone('upgrade-node-version', runtime.commands.node)
     }
 
-    if (!isNodeVersionSupported(runtime.node.version)) {
+    if (!isNodeVersionSupported(runtime.commands.node.version)) {
       throw new Error(`需要 Node.js >=${OPENCLAW_REQUIRED_NODE_VERSION}，自动升级没有完成。`)
     }
 
-    if (!runtime.npm.exists) {
+    if (!runtime.commands.npm.exists) {
       throw new Error('未检测到 npm，当前 Node.js 环境不完整。请重新安装 Node.js。')
     }
 
-    if (!runtime.pnpm.exists) {
-      logStepStart('install-pnpm', { npm: runtime.npm.path })
+    if (!runtime.commands.pnpm.exists) {
+      logStepStart('install-pnpm', { npm: runtime.commands.npm.path })
       sendProgress(event, 'preparing', 18, '正在安装 pnpm')
-      await runGlobalCommand(getCommandPath(runtime.npm, 'npm'), ['install', '-g', 'pnpm'], getPackageManagerEnv())
+      await runGlobalCommand(getCommandPath(runtime.commands.npm, 'npm'), ['install', '-g', 'pnpm'], getPackageManagerEnv())
       logStepDone('install-pnpm')
     }
 
     logStepStart('verify-pnpm')
     const runtimeAfterPnpm = await getRuntimeStatus()
-    if (!runtimeAfterPnpm.pnpm.exists) {
+    if (!runtimeAfterPnpm.commands.pnpm.exists) {
       throw new Error('pnpm 安装失败，请检查网络或全局安装权限。')
     }
-    logStepDone('verify-pnpm', runtimeAfterPnpm.pnpm)
+    logStepDone('verify-pnpm', runtimeAfterPnpm.commands.pnpm)
 
     logStepStart('configure-mirror')
     sendProgress(event, 'preparing', 32, '正在配置国内镜像，提高下载速度')
     await ensureMirrorConfigured()
     logStepDone('configure-mirror')
 
-    logStepStart('install-openclaw-package', { pnpm: runtimeAfterPnpm.pnpm.path })
+    logStepStart('install-openclaw-package', { pnpm: runtimeAfterPnpm.commands.pnpm.path })
     sendProgress(event, 'downloading', 52, '正在通过 pnpm 全局安装 openclaw')
-    await ensurePnpmHomeConfigured(runtimeAfterPnpm.pnpm.path)
-    await runGlobalCommand(getCommandPath(runtimeAfterPnpm.pnpm, 'pnpm'), ['add', '-g', 'openclaw@latest'], getPackageManagerEnv())
+    await ensurePnpmHomeConfigured(runtimeAfterPnpm.commands.pnpm.path)
+    await runGlobalCommand(getCommandPath(runtimeAfterPnpm.commands.pnpm, 'pnpm'), ['add', '-g', 'openclaw@latest'], getPackageManagerEnv())
     logStepDone('install-openclaw-package')
 
     let onboardWarning: { warning: string; warningDetail: string } | null = null
@@ -487,7 +506,7 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
 
     try {
       await runCommand(
-        getCommandPath(runtimeAfterInstallCommand.openclaw, 'openclaw'),
+        getCommandPath(runtimeAfterInstallCommand.commands.openclaw, 'openclaw'),
         getDefaultOnboardArgs(),
         getPackageManagerEnv()
       )
@@ -508,10 +527,10 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
 
     logStepStart('verify-openclaw')
     const runtimeAfterInstall = await getRuntimeStatus()
-    if (!runtimeAfterInstall.openclaw.exists) {
+    if (!hasOpenClawCommand(runtimeAfterInstall)) {
       throw new Error('openclaw 命令未成功安装。')
     }
-    logStepDone('verify-openclaw', runtimeAfterInstall.openclaw)
+    logStepDone('verify-openclaw', runtimeAfterInstall.commands.openclaw)
 
     sendProgress(event, 'completed', 100, '安装完成，openclaw 和 daemon 已准备就绪')
     return {
@@ -519,7 +538,7 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
       warning: onboardWarning?.warning,
       warningDetail: onboardWarning?.warningDetail,
       version: {
-        version: runtimeAfterInstall.openclaw.version || 'latest',
+        version: runtimeAfterInstall.commands.openclaw.version || 'latest',
         installDate: new Date().toISOString(),
         platform: process.platform,
         arch: process.arch
@@ -536,15 +555,28 @@ ipcMain.handle('uninstall-openclaw', async (event) => {
   try {
     logStepStart('uninstall-openclaw')
     const runtime = await getRuntimeStatus()
-    if (!runtime.pnpm.exists) {
-      throw new Error('未检测到 pnpm，无法执行一键卸载。')
+    if (!runtime.commands.pnpm.exists && !runtime.commands.npm.exists) {
+      throw new Error('未检测到 pnpm 或 npm，无法执行一键卸载。')
     }
 
     sendProgress(event, 'uninstalling', 30, '正在通过 pnpm 卸载 openclaw')
-    await ensurePnpmHomeConfigured(runtime.pnpm.path)
-    await runGlobalCommand(getCommandPath(runtime.pnpm, 'pnpm'), ['remove', '-g', 'openclaw'], getPackageManagerEnv())
+    await uninstallOpenClawPackage(runtime)
+    await ensureGatewayStoppedAfterUninstall()
 
-    sendProgress(event, 'uninstalling', 75, '如已安装 daemon，请按 openclaw 提示完成停用')
+    sendProgress(event, 'uninstalling', 75, '正在校验 openclaw 命令是否已移除')
+    const runtimeAfterUninstall = await getRuntimeStatus()
+    const commandStillExists = hasOpenClawCommand(runtimeAfterUninstall)
+
+    if (commandStillExists) {
+      throw new Error('openclaw 卸载命令已执行，但系统里仍然检测到 openclaw 命令。')
+    }
+
+    if (runtimeAfterUninstall.gateway.running) {
+      throw new Error(`openclaw 命令已移除，但 ${OPENCLAW_GATEWAY_PORT} 端口上的 gateway 进程仍在运行。`)
+    }
+
+    sendProgress(event, 'uninstalling', 90, 'openclaw 命令和 gateway 进程都已移除')
+
     sendProgress(event, 'uninstalling', 100, '卸载完成')
     logStepDone('uninstall-openclaw')
     return { success: true }
@@ -558,11 +590,143 @@ ipcMain.handle('uninstall-openclaw', async (event) => {
   }
 })
 
+async function stopAndUninstallGatewayService(runtime: RuntimeStatus) {
+  if (!runtime.commands.openclaw.path) {
+    return
+  }
+
+  const openclawCommand = getCommandPath(runtime.commands.openclaw, 'openclaw')
+  const lifecycleCommands: string[][] = [
+    ['gateway', 'stop', '--json'],
+    ['gateway', 'uninstall', '--json']
+  ]
+
+  for (const args of lifecycleCommands) {
+    try {
+      await runCommand(openclawCommand, args, getPackageManagerEnv())
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      log.warn('[GATEWAY LIFECYCLE WARN]', { args, message })
+    }
+  }
+}
+
+async function ensureGatewayStoppedAfterUninstall() {
+  const runningBeforeForceStop = await isOpenClawGatewayRunning()
+  if (!runningBeforeForceStop) {
+    return
+  }
+
+  await forceStopGatewayProcessByPort()
+
+  const stopped = await waitForGatewayStopped()
+  if (!stopped) {
+    throw new Error(`未能停止 ${OPENCLAW_GATEWAY_PORT} 端口上的 OpenClaw gateway 进程。`)
+  }
+}
+
+async function waitForGatewayStopped(retries = 10, delayMs = 300) {
+  for (let index = 0; index < retries; index += 1) {
+    const running = await isOpenClawGatewayRunning()
+    if (!running) {
+      return true
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, delayMs))
+  }
+
+  return false
+}
+
+async function forceStopGatewayProcessByPort() {
+  const commands = process.platform === 'win32'
+    ? [
+      `powershell -NoProfile -Command "$connections = Get-NetTCPConnection -LocalPort ${OPENCLAW_GATEWAY_PORT} -ErrorAction SilentlyContinue; if ($connections) { $connections | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { taskkill /PID $_ /F } }"`
+    ]
+    : process.platform === 'darwin'
+      ? [
+        `lsof -ti tcp:${OPENCLAW_GATEWAY_PORT} | xargs kill -TERM`,
+        `sleep 1 && lsof -ti tcp:${OPENCLAW_GATEWAY_PORT} | xargs kill -KILL`
+      ]
+      : [
+        `lsof -ti tcp:${OPENCLAW_GATEWAY_PORT} | xargs kill -TERM`,
+        `sleep 1 && lsof -ti tcp:${OPENCLAW_GATEWAY_PORT} | xargs kill -KILL`,
+        `fuser -k ${OPENCLAW_GATEWAY_PORT}/tcp`
+      ]
+
+  for (const command of commands) {
+    try {
+      await runShellCommand(command)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      log.warn('[FORCE STOP GATEWAY WARN]', { command, message })
+    }
+
+    const stopped = await waitForGatewayStopped(3, 200)
+    if (stopped) {
+      return
+    }
+  }
+}
+
+async function uninstallOpenClawPackage(runtime: RuntimeStatus) {
+  const packageManagerEnv = getPackageManagerEnv()
+  const uninstallErrors: string[] = []
+
+  if (runtime.commands.openclaw.path) {
+    try {
+      await runCommand(
+        getCommandPath(runtime.commands.openclaw, 'openclaw'),
+        ['uninstall', '--all', '--yes', '--non-interactive'],
+        packageManagerEnv
+      )
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      uninstallErrors.push(`openclaw uninstall --all --yes --non-interactive: ${message}`)
+    }
+
+    await stopAndUninstallGatewayService(runtime)
+  }
+
+  if (runtime.commands.pnpm.exists) {
+    await ensurePnpmHomeConfigured(runtime.commands.pnpm.path)
+
+    const pnpmCommand = getCommandPath(runtime.commands.pnpm, 'pnpm')
+    const pnpmAttempts: string[][] = [
+      ['remove', '--global', 'openclaw'],
+      ['uninstall', '--global', 'openclaw']
+    ]
+
+    for (const args of pnpmAttempts) {
+      try {
+        await runGlobalCommand(pnpmCommand, args, packageManagerEnv)
+        return
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error)
+        uninstallErrors.push(`pnpm ${args.join(' ')}: ${message}`)
+      }
+    }
+  }
+
+  if (runtime.commands.npm.exists) {
+    try {
+      await runGlobalCommand(getCommandPath(runtime.commands.npm, 'npm'), ['uninstall', '-g', 'openclaw'], packageManagerEnv)
+      return
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      uninstallErrors.push(`npm uninstall -g openclaw: ${message}`)
+    }
+  }
+
+  throw new Error(uninstallErrors.join('\n\n'))
+}
+
 ipcMain.handle('launch-openclaw', async () => {
   try {
     logStepStart('launch-check')
     const runtime = await getRuntimeStatus()
-    await runCommand(getCommandPath(runtime.openclaw, 'openclaw'), ['--help'])
+    await runCommand(getCommandPath(runtime.commands.openclaw, 'openclaw'), ['--help'])
     logStepDone('launch-check')
     return { success: true }
   } catch (error) {
@@ -626,11 +790,11 @@ ipcMain.handle('install-openclaw-plugin-preset', async (_event, presetId: string
   }
 
   const runtime = await getRuntimeStatus()
-  if (!runtime.openclaw.exists) {
+  if (!hasOpenClawCommand(runtime)) {
     throw new Error('当前未检测到 openclaw 命令，无法安装插件。')
   }
 
-  const openclawCommand = getCommandPath(runtime.openclaw, 'openclaw')
+  const openclawCommand = getCommandPath(runtime.commands.openclaw, 'openclaw')
   if (preset.installSource) {
     await runCommand(openclawCommand, ['plugins', 'install', preset.installSource])
   }
@@ -1151,46 +1315,86 @@ async function getRuntimeStatus(): Promise<RuntimeStatus> {
 }
 
 async function collectRuntimeStatus(): Promise<RuntimeStatus> {
-  const [nodePath, npmPath, pnpmPath, openclawPath, gatewayRunning] = await Promise.all([
-    whichCommand('node'),
-    whichCommand('npm'),
-    whichCommand('pnpm'),
-    whichCommand('openclaw'),
-    isOpenClawGatewayRunning()
+  const probeResult = await probeRuntime()
+  const runtime = buildRuntimeStatus(probeResult)
+  logStepDone('get-runtime-status', runtime)
+  return runtime
+}
+
+async function probeRuntime(): Promise<RuntimeProbeResult> {
+  const [commands, gatewayRunning] = await Promise.all([
+    probeRuntimeCommands(),
+    probeGatewayRuntime()
   ])
 
-  const [node, npm, pnpm, openclawCommand] = await Promise.all([
-    buildCommandStatus(nodePath, ['--version']),
-    buildCommandStatus(npmPath, ['--version']),
-    buildCommandStatus(pnpmPath, ['--version']),
-    buildCommandStatus(openclawPath, ['--version'])
-  ])
+  const registry = await probeRegistryRuntime(commands)
 
-  const openclaw: CommandCheckResult = {
-    exists: gatewayRunning || openclawCommand.exists,
-    path: openclawCommand.path,
-    version: openclawCommand.version
+  return {
+    commands,
+    gatewayRunning,
+    registry,
+    mirrorRecommended: isMirrorRecommended()
   }
+}
 
-  const [npmRegistry, pnpmRegistry] = await Promise.all([
-    npm.exists ? readRegistry('npm', npm.path) : Promise.resolve(null),
-    pnpm.exists ? readRegistry('pnpm', pnpm.path) : Promise.resolve(null)
+async function probeRuntimeCommands(): Promise<RuntimeCommandProbe> {
+  const [node, npm, pnpm, openclaw] = await Promise.all([
+    probeCommandStatus('node', ['--version']),
+    probeCommandStatus('npm', ['--version']),
+    probeCommandStatus('pnpm', ['--version']),
+    probeCommandStatus('openclaw', ['--version'])
   ])
 
-  const runtime = {
+  return {
     node,
     npm,
     pnpm,
-    openclaw,
-    gatewayRunning,
-    registry: {
-      npm: npmRegistry,
-      pnpm: pnpmRegistry
-    },
-    mirrorRecommended: isMirrorRecommended()
+    openclaw
   }
-  logStepDone('get-runtime-status', runtime)
-  return runtime
+}
+
+async function probeCommandStatus(command: string, versionArgs: string[]): Promise<CommandCheckResult> {
+  const commandPath = await whichCommand(command)
+  return buildCommandStatus(commandPath, versionArgs)
+}
+
+async function probeGatewayRuntime(): Promise<boolean> {
+  return isOpenClawGatewayRunning()
+}
+
+async function probeRegistryRuntime(commands: RuntimeCommandProbe): Promise<RuntimeStatus['registry']> {
+  const [npmRegistry, pnpmRegistry] = await Promise.all([
+    commands.npm.exists ? readRegistry('npm', commands.npm.path) : Promise.resolve(null),
+    commands.pnpm.exists ? readRegistry('pnpm', commands.pnpm.path) : Promise.resolve(null)
+  ])
+
+  return {
+    npm: npmRegistry,
+    pnpm: pnpmRegistry
+  }
+}
+
+function buildRuntimeStatus(probeResult: RuntimeProbeResult): RuntimeStatus {
+  const { commands, gatewayRunning, registry, mirrorRecommended } = probeResult
+
+  return {
+    commands: {
+      node: commands.node,
+      npm: commands.npm,
+      pnpm: commands.pnpm,
+      openclaw: commands.openclaw
+    },
+    gateway: {
+      running: gatewayRunning,
+      port: OPENCLAW_GATEWAY_PORT
+    },
+    registry,
+    mirrorRecommended
+  }
+}
+
+function hasOpenClawCommand(runtime: RuntimeStatus) {
+  return runtime.commands.openclaw.exists
 }
 
 function isOpenClawGatewayRunning(): Promise<boolean> {
@@ -1241,7 +1445,7 @@ async function installNodeJs(event: Electron.IpcMainInvokeEvent) {
 }
 
 async function upgradeNodeJs(event: Electron.IpcMainInvokeEvent, runtime: RuntimeStatus) {
-  logStepStart('upgrade-nodejs', runtime.node)
+  logStepStart('upgrade-nodejs', runtime.commands.node)
   const upgradedWithManager = await tryUpgradeNodeWithManager(event)
 
   if (upgradedWithManager) {
@@ -1253,14 +1457,14 @@ async function upgradeNodeJs(event: Electron.IpcMainInvokeEvent, runtime: Runtim
   await installNodeJs(event)
 
   const refreshedRuntime = await getRuntimeStatus()
-  if (!isNodeVersionSupported(refreshedRuntime.node.version)) {
-    throw new Error(buildNodeVersionError(refreshedRuntime.node.version, refreshedRuntime.node.path))
+  if (!isNodeVersionSupported(refreshedRuntime.commands.node.version)) {
+    throw new Error(buildNodeVersionError(refreshedRuntime.commands.node.version, refreshedRuntime.commands.node.path))
   }
 
-  if (!runtime.node.path || refreshedRuntime.node.path !== runtime.node.path) {
-    log.info('Node.js 已通过官方安装器升级:', refreshedRuntime.node.path, refreshedRuntime.node.version)
+  if (!runtime.commands.node.path || refreshedRuntime.commands.node.path !== runtime.commands.node.path) {
+    log.info('Node.js 已通过官方安装器升级:', refreshedRuntime.commands.node.path, refreshedRuntime.commands.node.version)
   }
-  logStepDone('upgrade-nodejs', refreshedRuntime.node)
+  logStepDone('upgrade-nodejs', refreshedRuntime.commands.node)
 }
 
 async function getCommandStatus(command: string, versionArgs: string[]): Promise<CommandCheckResult> {
@@ -1854,7 +2058,7 @@ async function applyAutoRepair(message: string) {
 
   if (lowered.includes('requires node >=') || lowered.includes('需要 node.js >=')) {
     const runtime = await getRuntimeStatus()
-    if (runtime.node.exists) {
+    if (runtime.commands.node.exists) {
       await tryUpgradeNodeWithManager(null)
     }
   }
@@ -2095,7 +2299,7 @@ async function tryUpgradeNodeWithManager(event: Electron.IpcMainInvokeEvent | nu
       )
 
       const runtime = await getRuntimeStatus()
-      if (isNodeVersionSupported(runtime.node.version)) {
+      if (isNodeVersionSupported(runtime.commands.node.version)) {
         return true
       }
     }
@@ -2106,7 +2310,7 @@ async function tryUpgradeNodeWithManager(event: Electron.IpcMainInvokeEvent | nu
       await runGlobalCommand(nPath, [OPENCLAW_REQUIRED_NODE_VERSION], mirrorEnv)
 
       const runtime = await getRuntimeStatus()
-      if (isNodeVersionSupported(runtime.node.version)) {
+      if (isNodeVersionSupported(runtime.commands.node.version)) {
         return true
       }
     }

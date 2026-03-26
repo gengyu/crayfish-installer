@@ -22,11 +22,16 @@ export interface ElectronAPI {
   checkExistingInstallation: () => Promise<{ exists: boolean; path: string | null; version: { version: string; installDate: string } | null }>
   checkDependencies: () => Promise<Record<string, boolean>>
   getRuntimeStatus: () => Promise<{
-    node: { exists: boolean; path: string | null; version: string | null }
-    npm: { exists: boolean; path: string | null; version: string | null }
-    pnpm: { exists: boolean; path: string | null; version: string | null }
-    openclaw: { exists: boolean; path: string | null; version: string | null }
-    gatewayRunning: boolean
+    commands: {
+      node: { exists: boolean; path: string | null; version: string | null }
+      npm: { exists: boolean; path: string | null; version: string | null }
+      pnpm: { exists: boolean; path: string | null; version: string | null }
+      openclaw: { exists: boolean; path: string | null; version: string | null }
+    }
+    gateway: {
+      running: boolean
+      port: number
+    }
     registry: { npm: string | null; pnpm: string | null }
     mirrorRecommended: boolean
   }>

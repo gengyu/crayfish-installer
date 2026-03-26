@@ -14,6 +14,7 @@ type WorkspaceTab = 'setup' | 'plugins' | 'agents'
 
 interface OpenClawSettingsPageProps {
   existingInstall: ExistingInstall | null
+  onGoToInstaller: () => void
 }
 
 const providerApiOptions: Array<{ value: OpenClawProviderApi; label: string; hint: string }> = [
@@ -88,7 +89,7 @@ function statusCardClass(active: boolean) {
     : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
 }
 
-export default function OpenClawSettingsPage({ existingInstall }: OpenClawSettingsPageProps) {
+export default function OpenClawSettingsPage({ existingInstall, onGoToInstaller }: OpenClawSettingsPageProps) {
   const [activeTab, setActiveTab] = useState<WorkspaceTab>('setup')
   const [settings, setSettings] = useState<OpenClawSettings | null>(null)
   const [pluginPresets, setPluginPresets] = useState<OpenClawPluginPreset[]>([])
@@ -256,7 +257,14 @@ export default function OpenClawSettingsPage({ existingInstall }: OpenClawSettin
               </div>
             </div>
 
-            <div className="grid gap-3 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+            <div className="relative grid gap-3 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+              <button
+                className="absolute right-0 top-0 rounded-bl-2xl rounded-tr-[28px] border-b border-l border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                onClick={onGoToInstaller}
+                type="button"
+              >
+                卸载入口
+              </button>
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">安装状态</div>
                 <div className="mt-2 text-sm font-medium text-slate-900">

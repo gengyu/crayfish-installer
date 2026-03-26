@@ -6,6 +6,7 @@ interface InstallerProps {
   systemInfo: SystemInfo | null
   existingInstall: { exists: boolean; path: string | null; version: { version: string; installDate: string } | null } | null
   onInstallationChanged: () => void
+  onBackToSettings?: () => void
 }
 
 type InstallStage =
@@ -34,16 +35,21 @@ interface InstallState {
 }
 
 interface RuntimeStatus {
-  node: { exists: boolean; path: string | null; version: string | null }
-  npm: { exists: boolean; path: string | null; version: string | null }
-  pnpm: { exists: boolean; path: string | null; version: string | null }
-  openclaw: { exists: boolean; path: string | null; version: string | null }
-  gatewayRunning: boolean
+  commands: {
+    node: { exists: boolean; path: string | null; version: string | null }
+    npm: { exists: boolean; path: string | null; version: string | null }
+    pnpm: { exists: boolean; path: string | null; version: string | null }
+    openclaw: { exists: boolean; path: string | null; version: string | null }
+  }
+  gateway: {
+    running: boolean
+    port: number
+  }
   registry: { npm: string | null; pnpm: string | null }
   mirrorRecommended: boolean
 }
 
-export default function Installer({ systemInfo, existingInstall, onInstallationChanged }: InstallerProps) {
+export default function Installer({ systemInfo, existingInstall, onInstallationChanged, onBackToSettings }: InstallerProps) {
   const [state, setState] = useState<InstallState>({
     stage: 'idle',
     progress: 0,
@@ -159,7 +165,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
         }))
       } else {
         const nextRuntimeStatus = await refreshRuntimeState()
-        const installed = nextRuntimeStatus.openclaw.exists
+        const installed = nextRuntimeStatus.commands.openclaw.exists
         setState(prev => ({
           ...prev,
           stage: installed ? 'completed' : 'idle',
@@ -227,7 +233,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
       setIsSubmitting(false)
 
       const nextRuntimeStatus = await refreshRuntimeState()
-      setInstallDetected(nextRuntimeStatus.openclaw.exists)
+      setInstallDetected(nextRuntimeStatus.commands.openclaw.exists)
       onInstallationChanged()
     } finally {
       activeOperationRef.current = null
@@ -274,8 +280,8 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
   const isInstalling = ['checking', 'preparing', 'downloading', 'verifying', 'extracting', 'finalizing'].includes(state.stage)
   const isUninstalling = state.stage === 'uninstalling' && state.progress < 100
   const isBusy = isSubmitting || isInstalling || isUninstalling
-  const isInstalled = installDetected || Boolean(existingInstall?.exists) || Boolean(runtimeStatus?.openclaw.exists)
-  const isGatewayRunning = Boolean(runtimeStatus?.gatewayRunning)
+  const isInstalled = installDetected || Boolean(existingInstall?.exists) || Boolean(runtimeStatus?.commands.openclaw.exists)
+  const isGatewayRunning = Boolean(runtimeStatus?.gateway.running)
   const isSupportedDesktopPlatform = systemInfo
     ? systemInfo.platform === 'win32' || systemInfo.platform === 'darwin'
     : true
@@ -293,22 +299,22 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
   const runtimeSummary = runtimeStatus ? [
     {
       label: 'Node.js 环境',
-      value: runtimeStatus.node.exists ? (runtimeStatus.node.version || '已安装') : '待安装',
-      done: runtimeStatus.node.exists
+      value: runtimeStatus.commands.node.exists ? (runtimeStatus.commands.node.version || '已安装') : '待安装',
+      done: runtimeStatus.commands.node.exists
     },
     {
       label: '核心依赖',
-      value: runtimeStatus.pnpm.exists ? (runtimeStatus.pnpm.version || '已配置') : '待配置',
-      done: runtimeStatus.pnpm.exists
+      value: runtimeStatus.commands.pnpm.exists ? (runtimeStatus.commands.pnpm.version || '已配置') : '待配置',
+      done: runtimeStatus.commands.pnpm.exists
     },
     {
       label: 'OpenClaw',
       value: isGatewayRunning
         ? '运行中'
-        : runtimeStatus.openclaw.exists
-          ? (runtimeStatus.openclaw.version || '已准备')
+        : runtimeStatus.commands.openclaw.exists
+          ? (runtimeStatus.commands.openclaw.version || '已准备')
           : '准备中',
-      done: runtimeStatus.openclaw.exists
+      done: runtimeStatus.commands.openclaw.exists
     }
   ] : []
 
@@ -354,6 +360,18 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
   return (
     <div className="w-full max-w-md">
       <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
+        {isInstalled && onBackToSettings ? (
+          <div className="border-b border-slate-100 bg-slate-50 px-8 py-3">
+            <button
+              className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+              onClick={onBackToSettings}
+              type="button"
+            >
+              ← 返回配置页面
+            </button>
+          </div>
+        ) : null}
+
         <div className="px-8 pb-5 pt-8 text-center">
           <div className="mb-4 flex justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-brand-100 bg-brand-50 text-3xl text-brand-600 shadow-sm">
