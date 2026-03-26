@@ -1,11 +1,12 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { fileURLToPath } from 'url'
 import { basename, dirname, join } from 'path'
-import { spawn, exec } from 'child_process'
+import { exec } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import https from 'https'
 import log from 'electron-log'
+import { execa, execaCommand } from 'execa'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -281,7 +282,7 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     if (!runtime.pnpm.exists) {
       logStepStart('install-pnpm', { npm: runtime.npm.path })
       sendProgress(event, 'preparing', 18, '正在安装 pnpm')
-      await runGlobalCommand(getCommandPath(runtime.npm, 'npm'), ['install', '-g', 'pnpm'], getNodeMirrorEnv())
+      await runGlobalCommand(getCommandPath(runtime.npm, 'npm'), ['install', '-g', 'pnpm'], getPackageManagerEnv())
       logStepDone('install-pnpm')
     }
 
@@ -299,13 +300,18 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
 
     logStepStart('install-openclaw-package', { pnpm: runtimeAfterPnpm.pnpm.path })
     sendProgress(event, 'downloading', 52, '正在通过 pnpm 全局安装 openclaw')
-    await runGlobalCommand(getCommandPath(runtimeAfterPnpm.pnpm, 'pnpm'), ['add', '-g', 'openclaw@latest'], getNodeMirrorEnv())
+    await ensurePnpmHomeConfigured(runtimeAfterPnpm.pnpm.path)
+    await runGlobalCommand(getCommandPath(runtimeAfterPnpm.pnpm, 'pnpm'), ['add', '-g', 'openclaw@latest'], getPackageManagerEnv())
     logStepDone('install-openclaw-package')
 
     logStepStart('run-openclaw-onboard')
-    sendProgress(event, 'finalizing', 78, '正在执行 openclaw onboard --install-daemon')
+    sendProgress(event, 'finalizing', 78, '正在执行 OpenClaw 初始化')
     const runtimeAfterInstallCommand = await getRuntimeStatus()
-    await runCommand(getCommandPath(runtimeAfterInstallCommand.openclaw, 'openclaw'), ['onboard', '--install-daemon'], getNodeMirrorEnv())
+    await runCommand(
+      getCommandPath(runtimeAfterInstallCommand.openclaw, 'openclaw'),
+      getDefaultOnboardArgs(),
+      getPackageManagerEnv()
+    )
     logStepDone('run-openclaw-onboard')
 
     logStepStart('verify-openclaw')
@@ -341,7 +347,8 @@ ipcMain.handle('uninstall-openclaw', async (event) => {
     }
 
     sendProgress(event, 'uninstalling', 30, '正在通过 pnpm 卸载 openclaw')
-    await runGlobalCommand(getCommandPath(runtime.pnpm, 'pnpm'), ['remove', '-g', 'openclaw'], getNodeMirrorEnv())
+    await ensurePnpmHomeConfigured(runtime.pnpm.path)
+    await runGlobalCommand(getCommandPath(runtime.pnpm, 'pnpm'), ['remove', '-g', 'openclaw'], getPackageManagerEnv())
 
     sendProgress(event, 'uninstalling', 75, '如已安装 daemon，请按 openclaw 提示完成停用')
     sendProgress(event, 'uninstalling', 100, '卸载完成')
@@ -498,127 +505,114 @@ function whichCommand(command: string): Promise<string | null> {
 }
 
 function runCommand(command: string, args: string[], extraEnv: Record<string, string> = {}): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const useWindowsShell = shouldUseWindowsShell(command)
-    const spawnCommand = useWindowsShell ? (process.env.ComSpec || 'cmd.exe') : command
-    const spawnArgs = useWindowsShell
-      ? ['/d', '/s', '/c', buildWindowsCommand(command, args)]
-      : args
-    const displayCommand = useWindowsShell
-      ? `${spawnCommand} ${spawnArgs.join(' ')}`
-      : `${spawnCommand} ${spawnArgs.join(' ')}`
+  const env = {
+    ...process.env,
+    ...extraEnv,
+    PATH: buildRuntimePath(extraEnv.PATH)
+  }
+  const displayCommand = [command, ...args].join(' ')
 
-    log.info('[COMMAND START]', {
-      command,
-      args,
-      spawnCommand,
-      spawnArgs,
-      useWindowsShell,
-      path: buildRuntimePath(extraEnv.PATH)
-    })
+  log.info('[COMMAND START]', {
+    command,
+    args,
+    displayCommand,
+    path: env.PATH
+  })
 
-    const child = spawn(spawnCommand, spawnArgs, {
-      env: {
-        ...process.env,
-        ...extraEnv,
-        PATH: buildRuntimePath(extraEnv.PATH)
-      },
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
+  const run = async () => {
+    try {
+      const result = await execa(command, args, {
+        env,
+        windowsHide: true,
+        shell: false
+      })
 
-    let stdout = ''
-    let stderr = ''
+      log.info('[COMMAND DONE]', {
+        command: displayCommand,
+        code: result.exitCode,
+        stdout: summarizeOutput(result.stdout),
+        stderr: summarizeOutput(result.stderr)
+      })
 
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString()
-    })
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-    })
-
-    child.on('error', reject)
-    child.on('close', (code) => {
-      if (code === 0) {
-        log.info('[COMMAND DONE]', {
-          command: displayCommand,
-          code,
-          stdout: summarizeOutput(stdout),
-          stderr: summarizeOutput(stderr)
-        })
-        resolve(stdout || stderr)
-        return
+      return result.stdout || result.stderr
+    } catch (error) {
+      const execaError = error as {
+        shortMessage?: string
+        stderr?: string
+        stdout?: string
+        exitCode?: number
+        message?: string
       }
 
       log.error('[COMMAND FAIL]', {
         command: displayCommand,
-        code,
-        stdout: summarizeOutput(stdout),
-        stderr: summarizeOutput(stderr)
+        code: execaError.exitCode ?? 'unknown',
+        stdout: summarizeOutput(execaError.stdout || ''),
+        stderr: summarizeOutput(execaError.stderr || ''),
+        message: execaError.shortMessage || execaError.message || 'command failed'
       })
-      reject(new Error((stderr || stdout || `${command} 执行失败`).trim()))
-    })
-  })
+
+      throw new Error((execaError.stderr || execaError.stdout || execaError.shortMessage || execaError.message || `${command} 执行失败`).trim())
+    }
+  }
+
+  return run()
 }
 
 function runShellCommand(command: string, extraEnv: Record<string, string> = {}): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const shellPath = process.platform === 'win32'
-      ? (process.env.ComSpec || 'cmd.exe')
-      : (process.env.SHELL || '/bin/zsh')
-    const shellArgs = process.platform === 'win32'
-      ? ['/d', '/s', '/c', command]
-      : ['-lc', command]
+  const shellPath = process.platform === 'win32'
+    ? (process.env.ComSpec || 'cmd.exe')
+    : (process.env.SHELL || '/bin/zsh')
+  const env = {
+    ...process.env,
+    ...extraEnv,
+    PATH: buildRuntimePath(extraEnv.PATH)
+  }
 
-    log.info('[SHELL START]', {
-      shellPath,
-      shellArgs,
-      command,
-      path: buildRuntimePath(extraEnv.PATH)
-    })
+  log.info('[SHELL START]', {
+    shellPath,
+    command,
+    path: env.PATH
+  })
 
-    const child = spawn(shellPath, shellArgs, {
-      env: {
-        ...process.env,
-        ...extraEnv,
-        PATH: buildRuntimePath(extraEnv.PATH)
-      },
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
+  const run = async () => {
+    try {
+      const result = await execaCommand(command, {
+        env,
+        windowsHide: true,
+        shell: shellPath
+      })
 
-    let stdout = ''
-    let stderr = ''
+      log.info('[SHELL DONE]', {
+        command,
+        code: result.exitCode,
+        stdout: summarizeOutput(result.stdout),
+        stderr: summarizeOutput(result.stderr)
+      })
 
-    child.stdout.on('data', (chunk) => {
-      stdout += chunk.toString()
-    })
-
-    child.stderr.on('data', (chunk) => {
-      stderr += chunk.toString()
-    })
-
-    child.on('error', reject)
-    child.on('close', (code) => {
-      if (code === 0) {
-        log.info('[SHELL DONE]', {
-          command,
-          code,
-          stdout: summarizeOutput(stdout),
-          stderr: summarizeOutput(stderr)
-        })
-        resolve(stdout || stderr)
-        return
+      return result.stdout || result.stderr
+    } catch (error) {
+      const execaError = error as {
+        shortMessage?: string
+        stderr?: string
+        stdout?: string
+        exitCode?: number
+        message?: string
       }
 
       log.error('[SHELL FAIL]', {
         command,
-        code,
-        stdout: summarizeOutput(stdout),
-        stderr: summarizeOutput(stderr)
+        code: execaError.exitCode ?? 'unknown',
+        stdout: summarizeOutput(execaError.stdout || ''),
+        stderr: summarizeOutput(execaError.stderr || ''),
+        message: execaError.shortMessage || execaError.message || 'shell command failed'
       })
-      reject(new Error((stderr || stdout || `${command} 执行失败`).trim()))
-    })
-  })
+
+      throw new Error((execaError.stderr || execaError.stdout || execaError.shortMessage || execaError.message || `${command} 执行失败`).trim())
+    }
+  }
+
+  return run()
 }
 
 function downloadFile(url: string, destination: string, onProgress?: (progress: number) => void): Promise<void> {
@@ -712,11 +706,12 @@ async function ensureMirrorConfigured() {
   const pnpmPath = await getCommandExecutionPath('pnpm')
 
   if (npmPath) {
-    await runCommand(npmPath, ['config', 'set', 'registry', registry], getNodeMirrorEnv())
+    await runCommand(npmPath, ['config', 'set', 'registry', registry], getPackageManagerEnv())
   }
 
   if (pnpmPath) {
-    await runCommand(pnpmPath, ['config', 'set', 'registry', registry], getNodeMirrorEnv())
+    await ensurePnpmHomeConfigured(pnpmPath)
+    await runCommand(pnpmPath, ['config', 'set', 'registry', registry], getPackageManagerEnv())
   }
   logStepDone('ensure-mirror-configured', { npmPath, pnpmPath, registry })
 }
@@ -941,36 +936,6 @@ function normalizeCommandPath(commandPath: string | null, commandName: string) {
   }) || commandPath
 }
 
-function shouldUseWindowsShell(command: string) {
-  if (process.platform !== 'win32') {
-    return false
-  }
-
-  const lowered = command.toLowerCase()
-  return lowered.endsWith('.cmd')
-    || lowered.endsWith('.bat')
-    || lowered.includes('\\npm')
-    || lowered.includes('\\pnpm')
-    || lowered.includes('\\openclaw')
-}
-
-function buildWindowsCommand(command: string, args: string[]) {
-  const quoted = [command, ...args].map(quoteWindowsArgument)
-  return quoted.join(' ')
-}
-
-function quoteWindowsArgument(value: string) {
-  if (value.length === 0) {
-    return '""'
-  }
-
-  if (!/[ \t"]/u.test(value)) {
-    return value
-  }
-
-  return `"${value.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/g, '$1$1')}"`
-}
-
 function isNodeVersionSupported(version: string | null) {
   if (!version) {
     return false
@@ -1090,6 +1055,77 @@ function getNodeMirrorEnv() {
     N_NODE_MIRROR: CN_NODE_MIRROR,
     NVM_NODEJS_ORG_MIRROR: CN_NODE_MIRROR
   }
+}
+
+function getPnpmHomeDir() {
+  if (process.platform === 'win32') {
+    return join(os.homedir(), 'AppData', 'Local', 'pnpm')
+  }
+
+  if (process.platform === 'darwin') {
+    return join(os.homedir(), 'Library', 'pnpm')
+  }
+
+  return join(os.homedir(), '.local', 'share', 'pnpm')
+}
+
+function getPackageManagerEnv() {
+  const pnpmHome = getPnpmHomeDir()
+  fs.mkdirSync(pnpmHome, { recursive: true })
+
+  return {
+    ...getNodeMirrorEnv(),
+    PNPM_HOME: pnpmHome,
+    npm_config_global_bin_dir: pnpmHome,
+    npm_config_prefix: pnpmHome,
+    PATH: buildRuntimePath(pnpmHome)
+  }
+}
+
+function getDefaultOnboardArgs() {
+  return [
+    'onboard',
+    '--non-interactive',
+    '--accept-risk',
+    '--mode',
+    'local',
+    '--auth-choice',
+    'custom-api-key',
+    '--custom-base-url',
+    'http://127.0.0.1:1234/v1',
+    '--custom-model-id',
+    'minimax-m2.5-gs32',
+    '--custom-compatibility',
+    'openai',
+    '--custom-api-key',
+    'local',
+    '--secret-input-mode',
+    'plaintext',
+    '--gateway-port',
+    '18789',
+    '--gateway-bind',
+    'loopback',
+    '--install-daemon',
+    '--daemon-runtime',
+    'node',
+    '--skip-skills'
+  ]
+}
+
+async function ensurePnpmHomeConfigured(pnpmPath: string | null) {
+  const resolvedPnpmPath = pnpmPath || await getCommandExecutionPath('pnpm')
+  if (!resolvedPnpmPath) {
+    return
+  }
+
+  const pnpmHome = getPnpmHomeDir()
+  fs.mkdirSync(pnpmHome, { recursive: true })
+
+  logStepStart('ensure-pnpm-home-configured', { pnpmHome, pnpmPath: resolvedPnpmPath })
+  const env = getPackageManagerEnv()
+  await runCommand(resolvedPnpmPath, ['config', 'set', 'global-bin-dir', pnpmHome], env)
+  await runCommand(resolvedPnpmPath, ['config', 'set', 'global-dir', join(pnpmHome, 'global')], env)
+  logStepDone('ensure-pnpm-home-configured', { pnpmHome })
 }
 
 function buildRuntimePath(extraPath?: string) {
