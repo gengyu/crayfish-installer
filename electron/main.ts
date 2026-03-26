@@ -5,6 +5,7 @@ import { exec, execSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
 import https from 'https'
+import net from 'net'
 import log from 'electron-log'
 import { execa, execaCommand } from 'execa'
 import { shellEnv } from 'shell-env'
@@ -18,6 +19,8 @@ log.initialize()
 
 let mainWindow: BrowserWindow | null = null
 let resolvedRuntimeEnv: NodeJS.ProcessEnv = { ...process.env }
+let runtimeStatusInFlight: Promise<RuntimeStatus> | null = null
+const registryCache = new Map<'npm' | 'pnpm', { value: string | null; checkedAt: number }>()
 
 type InstallProgressStage =
   | 'idle'
@@ -42,6 +45,7 @@ interface RuntimeStatus {
   npm: CommandCheckResult
   pnpm: CommandCheckResult
   openclaw: CommandCheckResult
+  gatewayRunning: boolean
   registry: {
     npm: string | null
     pnpm: string | null
@@ -68,6 +72,7 @@ const NODE_LTS_BASE_URL = 'https://nodejs.org/dist/latest-v22.x/'
 const OPENCLAW_REQUIRED_NODE_VERSION = '22.16.0'
 const CN_NODE_MIRROR = 'https://npmmirror.com/mirrors/node'
 const NPM_REGISTRY = 'https://registry.npmmirror.com'
+const OPENCLAW_GATEWAY_PORT = 18789
 
 function logStepStart(step: string, detail?: unknown) {
   if (detail === undefined) {
@@ -528,13 +533,43 @@ function sendProgress(
 
 async function getRuntimeStatus(): Promise<RuntimeStatus> {
   logStepStart('get-runtime-status')
-  const [node, npm, pnpm, openclaw, npmRegistry, pnpmRegistry] = await Promise.all([
-    getCommandStatus('node', ['--version']),
-    getCommandStatus('npm', ['--version']),
-    getCommandStatus('pnpm', ['--version']),
-    getCommandStatus('openclaw', ['--version']),
-    readRegistry('npm'),
-    readRegistry('pnpm')
+  if (runtimeStatusInFlight) {
+    return runtimeStatusInFlight
+  }
+
+  runtimeStatusInFlight = collectRuntimeStatus()
+    .finally(() => {
+      runtimeStatusInFlight = null
+    })
+
+  return runtimeStatusInFlight
+}
+
+async function collectRuntimeStatus(): Promise<RuntimeStatus> {
+  const [nodePath, npmPath, pnpmPath, openclawPath, gatewayRunning] = await Promise.all([
+    whichCommand('node'),
+    whichCommand('npm'),
+    whichCommand('pnpm'),
+    whichCommand('openclaw'),
+    isOpenClawGatewayRunning()
+  ])
+
+  const [node, npm, pnpm, openclawCommand] = await Promise.all([
+    buildCommandStatus(nodePath, ['--version']),
+    buildCommandStatus(npmPath, ['--version']),
+    buildCommandStatus(pnpmPath, ['--version']),
+    buildCommandStatus(openclawPath, ['--version'])
+  ])
+
+  const openclaw: CommandCheckResult = {
+    exists: gatewayRunning || openclawCommand.exists,
+    path: openclawCommand.path,
+    version: openclawCommand.version
+  }
+
+  const [npmRegistry, pnpmRegistry] = await Promise.all([
+    npm.exists ? readRegistry('npm', npm.path) : Promise.resolve(null),
+    pnpm.exists ? readRegistry('pnpm', pnpm.path) : Promise.resolve(null)
   ])
 
   const runtime = {
@@ -542,6 +577,7 @@ async function getRuntimeStatus(): Promise<RuntimeStatus> {
     npm,
     pnpm,
     openclaw,
+    gatewayRunning,
     registry: {
       npm: npmRegistry,
       pnpm: pnpmRegistry
@@ -550,6 +586,30 @@ async function getRuntimeStatus(): Promise<RuntimeStatus> {
   }
   logStepDone('get-runtime-status', runtime)
   return runtime
+}
+
+function isOpenClawGatewayRunning(): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({
+      host: '127.0.0.1',
+      port: OPENCLAW_GATEWAY_PORT
+    })
+
+    let settled = false
+    const finalize = (running: boolean) => {
+      if (settled) {
+        return
+      }
+      settled = true
+      socket.destroy()
+      resolve(running)
+    }
+
+    socket.setTimeout(350)
+    socket.once('connect', () => finalize(true))
+    socket.once('timeout', () => finalize(false))
+    socket.once('error', () => finalize(false))
+  })
 }
 
 async function installNodeJs(event: Electron.IpcMainInvokeEvent) {
@@ -600,6 +660,10 @@ async function upgradeNodeJs(event: Electron.IpcMainInvokeEvent, runtime: Runtim
 
 async function getCommandStatus(command: string, versionArgs: string[]): Promise<CommandCheckResult> {
   const path = await whichCommand(command)
+  return buildCommandStatus(path, versionArgs)
+}
+
+async function buildCommandStatus(path: string | null, versionArgs: string[]): Promise<CommandCheckResult> {
   if (!path) {
     return { exists: false, path: null, version: null }
   }
@@ -873,16 +937,28 @@ async function runGlobalCommand(command: string, args: string[], extraEnv: Recor
   }
 }
 
-function readRegistry(tool: 'npm' | 'pnpm'): Promise<string | null> {
+function readRegistry(tool: 'npm' | 'pnpm', commandPath?: string | null): Promise<string | null> {
+  const cached = registryCache.get(tool)
+  if (cached && Date.now() - cached.checkedAt < 15_000) {
+    return Promise.resolve(cached.value)
+  }
+
   return new Promise((resolve) => {
-    exec(`${tool} config get registry`, (error, stdout) => {
+    const resolvedCommand = commandPath || getKnownCommandPath(tool) || getShellCommand(tool)
+    exec(`"${resolvedCommand}" config get registry`, {
+      env: withNormalizedPathEnv(resolvedRuntimeEnv, buildRuntimePath()),
+      windowsHide: true
+    }, (error, stdout) => {
       if (error) {
+        registryCache.set(tool, { value: null, checkedAt: Date.now() })
         resolve(null)
         return
       }
 
       const value = stdout.trim()
-      resolve(value && value !== 'undefined' ? value : null)
+      const normalized = value && value !== 'undefined' ? value : null
+      registryCache.set(tool, { value: normalized, checkedAt: Date.now() })
+      resolve(normalized)
     })
   })
 }

@@ -38,6 +38,7 @@ interface RuntimeStatus {
   npm: { exists: boolean; path: string | null; version: string | null }
   pnpm: { exists: boolean; path: string | null; version: string | null }
   openclaw: { exists: boolean; path: string | null; version: string | null }
+  gatewayRunning: boolean
   registry: { npm: string | null; pnpm: string | null }
   mirrorRecommended: boolean
 }
@@ -274,6 +275,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
   const isUninstalling = state.stage === 'uninstalling' && state.progress < 100
   const isBusy = isSubmitting || isInstalling || isUninstalling
   const isInstalled = installDetected || Boolean(existingInstall?.exists) || Boolean(runtimeStatus?.openclaw.exists)
+  const isGatewayRunning = Boolean(runtimeStatus?.gatewayRunning)
   const isSupportedDesktopPlatform = systemInfo
     ? systemInfo.platform === 'win32' || systemInfo.platform === 'darwin'
     : true
@@ -301,12 +303,16 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     },
     {
       label: 'OpenClaw',
-      value: runtimeStatus.openclaw.exists ? (runtimeStatus.openclaw.version || '已准备') : '准备中',
+      value: isGatewayRunning
+        ? '运行中'
+        : runtimeStatus.openclaw.exists
+          ? (runtimeStatus.openclaw.version || '已准备')
+          : '准备中',
       done: runtimeStatus.openclaw.exists
     }
   ] : []
 
-  const canLaunch = isInstalled
+  const canLaunch = isInstalled && !isGatewayRunning
   const canUninstall = isInstalled && !isBusy
   const canOpenDirectory = Boolean(state.installPath || existingInstall?.path)
   const environmentNote = (() => {
@@ -388,13 +394,15 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
                 <div className="state-error-box">
                   <p className="state-error-title">{state.warning}</p>
                   <p className="state-error-text">OpenClaw 主程序已经安装完成。</p>
-                  <p className="state-error-hint">你可以先执行 `openclaw` 启动，或执行 `openclaw gateway run` 前台运行网关。</p>
+                  {!isGatewayRunning ? (
+                    <p className="state-error-hint">你可以先执行 `openclaw` 启动，或执行 `openclaw gateway run` 前台运行网关。</p>
+                  ) : null}
                 </div>
               ) : null}
 
               {(state.stage === 'completed' || (isInstalled && !isBusy && !state.error)) ? (
                 <div className="state-success-box">
-                  <p>OpenClaw 已安装完成，可以直接开始使用。</p>
+                  <p>{isGatewayRunning ? 'OpenClaw 已在运行，可以直接开始使用。' : 'OpenClaw 已安装完成，可以直接开始使用。'}</p>
                 </div>
               ) : null}
             </div>
@@ -498,14 +506,16 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
             </>
           ) : (state.stage === 'completed' || isInstalled) ? (
             <>
-              <button 
-                className="btn btn-primary btn-large btn-block"
-                onClick={handleLaunch}
-                disabled={isBusy}
-              >
-                <span className="btn-icon">🚀</span>
-                启动 OpenClaw
-              </button>
+              {!isGatewayRunning ? (
+                <button 
+                  className="btn btn-primary btn-large btn-block"
+                  onClick={handleLaunch}
+                  disabled={isBusy}
+                >
+                  <span className="btn-icon">🚀</span>
+                  启动 OpenClaw
+                </button>
+              ) : null}
               <button
                 className="btn btn-secondary"
                 onClick={handleInstall}

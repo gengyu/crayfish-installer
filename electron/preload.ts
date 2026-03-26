@@ -21,6 +21,7 @@ export interface ElectronAPI {
     npm: { exists: boolean; path: string | null; version: string | null }
     pnpm: { exists: boolean; path: string | null; version: string | null }
     openclaw: { exists: boolean; path: string | null; version: string | null }
+    gatewayRunning: boolean
     registry: { npm: string | null; pnpm: string | null }
     mirrorRecommended: boolean
   }>
