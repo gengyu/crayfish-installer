@@ -7,7 +7,7 @@ import os from 'os'
 import https from 'https'
 import log from 'electron-log'
 import { execa, execaCommand } from 'execa'
-import shellEnv from 'shell-env'
+import { shellEnv } from 'shell-env'
 import { coerce, compare, gte } from 'semver'
 import sudoPrompt from 'sudo-prompt'
 
