@@ -20,15 +20,16 @@ function App() {
     : '检测中...'
 
   return (
-    <div className="app">
-      <main>
+    <div className="flex min-h-screen flex-col">
+      <main className="flex flex-1 items-center justify-center p-4">
         <Installer systemInfo={systemInfo} existingInstall={existingInstall} onInstallationChanged={refreshInstallation} />
       </main>
-      <footer className="app-footer">
+      <footer className="px-4 pb-3 text-center text-xs text-slate-500">
         <p>平台: {platformDisplay}</p>
         <p>
           <a 
             href="#" 
+            className="text-slate-600 transition hover:underline"
             onClick={(e) => {
               e.preventDefault()
               window.open('https://github.com/openclaw/openclaw', '_blank')

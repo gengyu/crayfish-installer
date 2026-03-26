@@ -1,127 +1,209 @@
 import { useState } from 'react'
-import '../styles/theme-showcase.css'
 
-const steps = [
-  { number: 1, title: 'License Agreement', description: 'Review terms & conditions', active: true },
-  { number: 2, title: 'Installation Settings', description: 'Configure preferences' },
-  { number: 3, title: 'Installation Progress', description: 'Installing files' },
-  { number: 4, title: 'Success', description: 'Ready to use' }
+type ShowcaseState = 'default' | 'installing' | 'failed' | 'success'
+
+const states: ShowcaseState[] = ['default', 'installing', 'failed', 'success']
+
+const normalDetails = [
+  { done: true, text: '已检查系统环境' },
+  { done: true, text: '已准备下载源' },
+  { done: false, text: '等待开始安装 OpenClaw' }
 ]
 
+const errorDetails = [
+  { done: true, text: '已完成环境检测' },
+  { done: false, text: '下载依赖包时网络超时' },
+  { done: false, text: '建议切换网络后重试' }
+]
+
+function CubeIcon() {
+  return (
+    <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m12 2 8 3.6v12.8L12 22 4 18.4V5.6L12 2Zm0 2.2L6.8 6.5 12 8.8l5.2-2.3L12 4.2Zm-6 4v8.8l5 2.2V11L6 8.2Zm7 10.9 5-2.2V8.2l-5 2.8v8.1Z" />
+    </svg>
+  )
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg className={`h-4 w-4 transition ${open ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function CheckIcon({ className = 'h-6 w-6' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 12.5 9 16.5 19 7.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m7 7 10 10M17 7 7 17" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export default function ThemeShowcasePage() {
-  const [accepted, setAccepted] = useState(false)
+  const [currentState, setCurrentState] = useState<ShowcaseState>('default')
+  const [showDetails, setShowDetails] = useState(false)
+
+  const isDefault = currentState === 'default'
+  const isInstalling = currentState === 'installing'
+  const isFailed = currentState === 'failed'
+  const isSuccess = currentState === 'success'
+  const detailRows = isFailed ? errorDetails : normalDetails
 
   return (
-    <div className="theme-demo-shell">
-      <section className="theme-demo-frame">
-        <aside className="theme-demo-sidebar">
-          <div className="theme-demo-brand">
-            <div className="theme-demo-brand-mark">S</div>
-            <div className="theme-demo-brand-name">SoftwarePro</div>
-          </div>
-
-          <ol className="theme-demo-steps">
-            {steps.map((step, index) => (
-              <li className={`theme-demo-step ${step.active ? 'is-active' : ''}`} key={step.number}>
-                {index < steps.length - 1 ? <span className="theme-demo-step-line" aria-hidden="true" /> : null}
-                <span className="theme-demo-step-badge">{step.number}</span>
-                <div className="theme-demo-step-copy">
-                  <div className="theme-demo-step-title">{step.title}</div>
-                  <div className="theme-demo-step-text">{step.description}</div>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-          <div className="theme-demo-version">v2.4.1 build 8920</div>
-        </aside>
-
-        <div className="theme-demo-main">
-          <header className="theme-demo-header">
-            <h1>End User License Agreement</h1>
-            <button className="theme-demo-language" type="button">
-              <span className="theme-demo-language-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none">
-                  <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-9Z" />
-                  <path d="M7 9.5h4M9 9.5v5M7.5 12h3" />
-                  <path d="M14 9.5h3.5M15 14.5h1.5M13.75 13c1.4-.42 2.54-1.5 3-2.9M14.5 10.1c.38 1.35 1.27 2.42 2.5 3" />
-                </svg>
-              </span>
-              English
-            </button>
+    <div className="flex min-h-screen w-full items-center justify-center bg-surface-50 p-4">
+      <div className="w-full max-w-md">
+        <main className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
+          <header className="px-8 pb-4 pt-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-brand-100 bg-brand-50 text-brand-600 shadow-sm">
+              <CubeIcon />
+            </div>
+            <h1 className="mb-2 text-2xl font-bold text-slate-900">OpenClaw</h1>
+            <p className="text-sm text-slate-500">智能环境配置向导</p>
           </header>
 
-          <div className="theme-demo-content">
-            <p className="theme-demo-intro">
-              Please read the following license agreement carefully before proceeding with the installation.
-            </p>
+          <section className="relative min-h-[160px] px-8 py-4">
+            {isDefault ? (
+              <div className="space-y-3 text-center">
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+                  <span className="text-amber-400">⚡</span>
+                  <span>无需命令行</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+                  <span className="text-brand-500">✦</span>
+                  <span>自动配置环境</span>
+                </div>
+                <div className="flex items-center justify-center gap-2 text-sm text-slate-600">
+                  <span className="text-blue-400">🕒</span>
+                  <span>约 1-3 分钟</span>
+                </div>
+              </div>
+            ) : null}
 
-            <article className="theme-demo-card">
-              <h2>SOFTWAREPRO END USER LICENSE AGREEMENT</h2>
+            {isInstalling ? (
+              <div className="text-center">
+                <h2 className="mb-4 text-base font-semibold text-slate-800">正在为你准备 OpenClaw...</h2>
+                <div className="relative mb-3 h-3 overflow-hidden rounded-full bg-slate-100 shadow-inner">
+                  <div className="h-full w-[65%] rounded-full bg-brand-500 transition-all duration-300" />
+                </div>
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span className="animate-pulse text-brand-600">正在下载必要组件...</span>
+                  <span className="text-slate-500">65%</span>
+                </div>
+              </div>
+            ) : null}
 
-              <p>
-                IMPORTANT - READ CAREFULLY: This End User License Agreement (&quot;EULA&quot;) is a legal
-                agreement between you (either an individual or a single entity) and SoftwarePro Inc. for
-                the software product identified above, which includes computer software and may include
-                associated media, printed materials, and &quot;online&quot; or electronic documentation
-                (&quot;SOFTWARE PRODUCT&quot;).
-              </p>
+            {isFailed ? (
+              <div className="text-center">
+                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-500">
+                  <CloseIcon />
+                </div>
+                <h2 className="mb-2 text-base font-semibold text-slate-800">安装遇到问题</h2>
+                <div className="mb-4 rounded-lg border border-red-100 bg-red-50/60 p-4 text-left">
+                  <p className="mb-1 text-sm font-medium text-red-800">网络连接不稳定</p>
+                  <p className="mb-2 text-xs text-slate-600">我们已自动重试 2 次，但未能解决。</p>
+                  <p className="text-xs text-slate-500">请检查网络后点击下方按钮重试。</p>
+                </div>
+              </div>
+            ) : null}
 
-              <h3>1. GRANT OF LICENSE.</h3>
-              <p>
-                SoftwarePro grants you the following rights provided that you comply with all terms and
-                conditions of this EULA: Installation and Use. You may install and use a copy of the
-                SOFTWARE PRODUCT on your personal computer or other device.
-              </p>
+            {isSuccess ? (
+              <div className="text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-green-500">
+                  <CheckIcon className="h-8 w-8" />
+                </div>
+                <h2 className="mb-2 text-lg font-bold text-slate-900">OpenClaw 已准备就绪</h2>
+                <p className="text-sm text-slate-500">环境配置完成，现在可以直接启动使用。</p>
+              </div>
+            ) : null}
+          </section>
 
-              <h3>2. DESCRIPTION OF OTHER RIGHTS AND LIMITATIONS.</h3>
-              <p>
-                - Limitations on Reverse Engineering, Decompilation, and Disassembly. You may not reverse
-                engineer, decompile, or disassemble the SOFTWARE PRODUCT.
-              </p>
-              <p>
-                - Separation of Components. The SOFTWARE PRODUCT is licensed as a single product. Its
-                component parts may not be separated for use on more than one device.
-              </p>
-              <p>
-                - Termination. Without prejudice to any other rights, SoftwarePro may terminate this EULA
-                if you fail to comply with the terms and conditions of this EULA.
-              </p>
+          <section className="border-t border-slate-100 bg-slate-50/80 px-8 py-3">
+            <button
+              className="flex w-full items-center justify-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-700"
+              onClick={() => setShowDetails((value) => !value)}
+              type="button"
+            >
+              <span>查看安装详情</span>
+              <ChevronIcon open={showDetails} />
+            </button>
 
-              <h3>3. COPYRIGHT.</h3>
-              <p>
-                All title and copyrights in and to the SOFTWARE PRODUCT, the accompanying printed
-                materials, and any copies of the SOFTWARE PRODUCT are owned by SoftwarePro or its
-                suppliers.
-              </p>
+            {showDetails ? (
+              <div className="mt-3 space-y-2">
+                {detailRows.map((item) => (
+                  <div className="flex items-center gap-2 text-xs text-slate-600" key={item.text}>
+                    <span className={`inline-flex w-4 justify-center font-bold ${item.done ? 'text-green-500' : 'text-brand-500'}`}>
+                      {item.done ? '✓' : '◌'}
+                    </span>
+                    <span>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </section>
 
-              <div className="theme-demo-updated">Last updated: October 2023</div>
-            </article>
+          <footer className="space-y-3 px-8 py-5">
+            {isDefault ? (
+              <button className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-700" type="button">
+                开始安装
+              </button>
+            ) : null}
 
-            <label className="theme-demo-checkbox">
-              <input
-                checked={accepted}
-                onChange={(event) => setAccepted(event.target.checked)}
-                type="checkbox"
-              />
-              <span className="theme-demo-checkbox-mark" aria-hidden="true">
-                <svg viewBox="0 0 16 16" fill="none">
-                  <path d="m3.5 8.2 2.6 2.6 6-6" />
-                </svg>
-              </span>
-              <span>I have read and agree to the terms of the End User License Agreement</span>
-            </label>
-          </div>
+            {isInstalling ? (
+              <button className="w-full rounded-xl bg-slate-200 px-4 py-3 text-sm font-medium text-slate-500" disabled type="button">
+                安装中...
+              </button>
+            ) : null}
 
-          <footer className="theme-demo-footer">
-            <button className="theme-demo-link-btn" type="button">Cancel</button>
-            <div className="theme-demo-footer-actions">
-              <button className="theme-demo-secondary-btn" type="button">Back</button>
-              <button className="theme-demo-primary-btn" disabled={!accepted} type="button">Next</button>
-            </div>
+            {isFailed ? (
+              <>
+                <button className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-700" type="button">
+                  再试一次
+                </button>
+                <button className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50" type="button">
+                  复制错误信息
+                </button>
+              </>
+            ) : null}
+
+            {isSuccess ? (
+              <>
+                <button className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-700" type="button">
+                  启动 OpenClaw
+                </button>
+                <button className="w-full px-4 py-2 text-sm font-medium text-slate-500 transition hover:text-slate-700" type="button">
+                  重新安装
+                </button>
+              </>
+            ) : null}
           </footer>
+        </main>
+
+        <div className="mt-4 flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-4 text-xs shadow-sm">
+          {states.map((state) => (
+            <button
+              className={`rounded-md px-3 py-1.5 transition ${
+                currentState === state
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+              key={state}
+              onClick={() => setCurrentState(state)}
+              type="button"
+            >
+              {state}
+            </button>
+          ))}
         </div>
-      </section>
+      </div>
     </div>
   )
 }

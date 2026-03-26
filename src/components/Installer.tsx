@@ -347,31 +347,37 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     return ''
   })()
 
+  const primaryButtonClass = 'inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none'
+  const secondaryButtonClass = 'inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400'
+  const detailActionClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-800'
+
   return (
-    <div className="installer">
-      <div className="installer-shell">
-        <div className="installer-card installer-hero">
-          <div className="hero-icon-wrap">
-            <div className="hero-icon">🦞</div>
+    <div className="w-full max-w-md">
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl">
+        <div className="px-8 pb-5 pt-8 text-center">
+          <div className="mb-4 flex justify-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-brand-100 bg-brand-50 text-3xl text-brand-600 shadow-sm">
+              🦞
+            </div>
           </div>
 
-          <div className="hero-copy">
-            <h1>OpenClaw</h1>
-            <p>{isInstalled ? '智能环境已就绪' : '智能环境配置向导'}</p>
+          <div>
+            <h1 className="mb-2 text-4xl font-extrabold tracking-[-0.04em] text-slate-900">OpenClaw</h1>
+            <p className="text-base font-semibold text-slate-500">{isInstalled ? '智能环境已就绪' : '智能环境配置向导'}</p>
           </div>
 
           {!isBusy && !state.error && !isInstalled ? (
-            <div className="hero-points">
-              <div className="hero-point"><span className="hero-point-icon">⚡</span><span>无需命令行</span></div>
-              <div className="hero-point"><span className="hero-point-icon">🪄</span><span>自动配置环境</span></div>
-              <div className="hero-point"><span className="hero-point-icon">🕒</span><span>约 1-3 分钟</span></div>
+            <div className="mx-auto mt-7 flex w-fit flex-col gap-3.5 text-left">
+              <div className="flex items-center gap-3 text-base font-semibold text-slate-600"><span>⚡</span><span>无需命令行</span></div>
+              <div className="flex items-center gap-3 text-base font-semibold text-slate-600"><span>🪄</span><span>自动配置环境</span></div>
+              <div className="flex items-center gap-3 text-base font-semibold text-slate-600"><span>🕒</span><span>约 1-3 分钟</span></div>
             </div>
           ) : (
-            <div className="state-area">
-              <h2 className="state-title">{statusTitle}</h2>
+            <div className="pt-2">
+              <h2 className="mb-4 text-base font-bold text-slate-800">{statusTitle}</h2>
 
               {isBusy ? (
-                <div className="state-progress">
+                <div>
                   <ProgressBar
                     progress={state.progress}
                     stage={getStageText()}
@@ -381,97 +387,101 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
               ) : null}
 
               {state.error ? (
-                <div className="state-error-box">
-                  <p className="state-error-title">{state.error}</p>
-                  <p className="state-error-text">
+                <div className="rounded-xl border border-red-100 bg-red-50/70 p-4 text-left">
+                  <p className="mb-1.5 text-sm font-bold text-red-800">{state.error}</p>
+                  <p className="text-xs leading-5 text-slate-600">
                     {state.attempts > 1 ? `已自动重试 ${state.attempts - 1} 次。` : '安装器没有成功完成当前步骤。'}
                   </p>
-                  <p className="state-error-hint">请检查网络或系统权限后，再点击安装按钮重试。</p>
+                  <p className="text-xs leading-5 text-slate-600">请检查网络或系统权限后，再点击安装按钮重试。</p>
                 </div>
               ) : null}
 
               {state.warning && !state.error ? (
-                <div className="state-error-box">
-                  <p className="state-error-title">{state.warning}</p>
-                  <p className="state-error-text">OpenClaw 主程序已经安装完成。</p>
+                <div className="rounded-xl border border-amber-100 bg-amber-50/70 p-4 text-left">
+                  <p className="mb-1.5 text-sm font-bold text-amber-800">{state.warning}</p>
+                  <p className="text-xs leading-5 text-slate-600">OpenClaw 主程序已经安装完成。</p>
                   {!isGatewayRunning ? (
-                    <p className="state-error-hint">你可以先执行 `openclaw` 启动，或执行 `openclaw gateway run` 前台运行网关。</p>
+                    <p className="text-xs leading-5 text-slate-600">你可以先执行 `openclaw` 启动，或执行 `openclaw gateway run` 前台运行网关。</p>
                   ) : null}
                 </div>
               ) : null}
 
               {(state.stage === 'completed' || (isInstalled && !isBusy && !state.error)) ? (
-                <div className="state-success-box">
-                  <p>{isGatewayRunning ? 'OpenClaw 已在运行，可以直接开始使用。' : 'OpenClaw 已安装完成，可以直接开始使用。'}</p>
+                <div className="text-center">
+                  <p className="text-xs leading-5 text-slate-600">{isGatewayRunning ? 'OpenClaw 已在运行，可以直接开始使用。' : 'OpenClaw 已安装完成，可以直接开始使用。'}</p>
                 </div>
               ) : null}
             </div>
           )}
         </div>
 
-        <div className="details-section">
-          <button className="detail-toggle" onClick={() => setShowDetails(prev => !prev)}>
+        <div className="border-t border-slate-200 bg-slate-50/80 px-8 pb-3 pt-2">
+          <button
+            className="flex w-full items-center justify-center gap-1.5 py-2.5 text-xs font-semibold text-slate-500 transition hover:text-slate-700"
+            onClick={() => setShowDetails(prev => !prev)}
+            type="button"
+          >
             <span>查看安装详情</span>
-            <span className={`detail-arrow ${showDetails ? 'open' : ''}`}>⌄</span>
+            <span className={`transition ${showDetails ? 'rotate-180' : ''}`}>⌄</span>
           </button>
 
           {showDetails ? (
-            <div className="details-content">
+            <div className="space-y-4 pt-2">
               {runtimeSummary.length > 0 ? (
-                <div className="details-normal">
+                <div className="space-y-2.5">
                   {runtimeSummary.map(item => (
-                    <div className="detail-line" key={item.label}>
-                      <span className={`detail-line-icon ${item.done ? 'done' : 'pending'}`}>{item.done ? '✓' : '◌'}</span>
+                    <div className="flex items-center gap-2 text-xs text-slate-600" key={item.label}>
+                      <span className={`inline-block w-4 text-center font-bold ${item.done ? 'text-green-500' : 'text-brand-500'}`}>{item.done ? '✓' : '◌'}</span>
                       <span>{item.done ? `${item.label}就绪` : `${item.label}准备中`}</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="details-normal">
-                  <div className="detail-line">
-                    <span className="detail-line-icon pending">◌</span>
+                <div className="space-y-2.5">
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <span className="inline-block w-4 text-center font-bold text-brand-500">◌</span>
                     <span>正在检测本机环境</span>
                   </div>
                 </div>
               )}
 
               {state.errorDetail ? (
-                <div className="details-error">
-                  <div className="detail-error-title">安装错误</div>
-                  <div className="detail-error-message">{state.errorDetail}</div>
+                <div className="rounded-xl border border-red-100 bg-white p-3">
+                  <div className="mb-1 text-xs font-semibold text-red-700">安装错误</div>
+                  <div className="text-xs leading-5 break-all text-slate-600">{state.errorDetail}</div>
                 </div>
               ) : null}
 
               {state.warningDetail && !state.error ? (
-                <div className="details-error">
-                  <div className="detail-error-title">安装提示</div>
-                  <div className="detail-error-message">{state.warningDetail}</div>
+                <div className="rounded-xl border border-amber-100 bg-white p-3">
+                  <div className="mb-1 text-xs font-semibold text-amber-700">安装提示</div>
+                  <div className="text-xs leading-5 break-all text-slate-600">{state.warningDetail}</div>
                 </div>
               ) : null}
 
               {showDetails && systemInfo ? (
-                <div className="details-meta">
+                <div className="space-y-1 border-t border-slate-200 pt-3 text-xs text-slate-500">
                   <div>{getPlatformName(systemInfo.platform)} / {systemInfo.arch}</div>
                   <div>{systemInfo.totalMemory} 内存</div>
                   <div>{environmentNote}</div>
-                  {state.installPath ? <div>{state.installPath}</div> : null}
+                  {state.installPath ? <div className="break-all">{state.installPath}</div> : null}
                 </div>
               ) : null}
 
               {(canLaunch || canOpenDirectory || canUninstall) ? (
-                <div className="details-actions">
+                <div className="flex flex-wrap gap-2">
                   {canLaunch ? (
-                    <button className="detail-action-btn" onClick={handleLaunch}>
+                    <button className={detailActionClass} onClick={handleLaunch} type="button">
                       启动
                     </button>
                   ) : null}
                   {canOpenDirectory ? (
-                    <button className="detail-action-btn" onClick={handleOpenDirectory}>
+                    <button className={detailActionClass} onClick={handleOpenDirectory} type="button">
                       打开目录
                     </button>
                   ) : null}
                   {canUninstall ? (
-                    <button className="detail-action-btn danger" onClick={handleUninstall}>
+                    <button className={`${detailActionClass} border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700`} onClick={handleUninstall} type="button">
                       卸载
                     </button>
                   ) : null}
@@ -481,25 +491,27 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
           ) : null}
         </div>
 
-        <div className="actions actions-secondary">
+        <div className="space-y-3 px-8 py-5">
           {state.error ? (
             <>
               <button 
-                className="btn btn-primary btn-large btn-block"
+                className={primaryButtonClass}
                 onClick={handleInstall}
                 disabled={isBusy || !isSupportedDesktopPlatform}
+                type="button"
               >
-                <span className="btn-icon">↻</span>
+                <span>↻</span>
                 再试一次
               </button>
               <button
-                className="btn btn-secondary btn-block"
+                className={secondaryButtonClass}
                 onClick={() => {
                   if (state.errorDetail) {
                     navigator.clipboard?.writeText(state.errorDetail)
                   }
                 }}
                 disabled={!state.errorDetail}
+                type="button"
               >
                 复制错误信息
               </button>
@@ -508,37 +520,41 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
             <>
               {!isGatewayRunning ? (
                 <button 
-                  className="btn btn-primary btn-large btn-block"
+                  className={primaryButtonClass}
                   onClick={handleLaunch}
                   disabled={isBusy}
+                  type="button"
                 >
-                  <span className="btn-icon">🚀</span>
+                  <span>🚀</span>
                   启动 OpenClaw
                 </button>
               ) : null}
               <button
-                className="btn btn-secondary"
+                className={secondaryButtonClass}
                 onClick={handleInstall}
                 disabled={isBusy}
+                type="button"
               >
                 重新安装
               </button>
             </>
           ) : isBusy ? (
             <button 
-              className="btn btn-secondary btn-large btn-block"
+              className={secondaryButtonClass}
               disabled
+              type="button"
             >
-              <span className="spinner"></span>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-500" />
               {state.stage === 'uninstalling' ? '卸载中...' : '安装中...'}
             </button>
           ) : (
             <button 
-              className="btn btn-primary btn-large btn-block"
+              className={primaryButtonClass}
               onClick={handleInstall}
               disabled={!isSupportedDesktopPlatform}
+              type="button"
             >
-              <span className="btn-icon">🚀</span>
+              <span>🚀</span>
               立即安装
             </button>
           )}
