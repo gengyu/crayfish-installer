@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { OpenClawSettings } from '../src/types'
+import type {
+  OpenClawAgentBundleResult,
+  OpenClawPluginPreset,
+  OpenClawSettings
+} from '../src/types'
 
 export interface SystemInfo {
   platform: string
@@ -34,6 +38,12 @@ export interface ElectronAPI {
   openDirectory: (dirPath: string) => Promise<void>
   getOpenClawSettings: () => Promise<OpenClawSettings>
   saveOpenClawSettings: (settings: OpenClawSettings) => Promise<{ success: boolean; configPath: string }>
+  getOpenClawPluginPresets: () => Promise<OpenClawPluginPreset[]>
+  applyOpenClawPluginPreset: (presetId: string) => Promise<{ success: boolean; configPath: string }>
+  installOpenClawPluginPreset: (presetId: string) => Promise<{ success: boolean; message: string }>
+  openOpenClawControlUi: () => Promise<{ success: boolean; url: string }>
+  exportOpenClawAgentBundle: (payload: { name: string; description: string }) => Promise<OpenClawAgentBundleResult>
+  importOpenClawAgentBundle: () => Promise<OpenClawAgentBundleResult>
   onInstallProgress: (callback: (data: { stage: string; progress: number; detail?: string }) => void) => void
   removeInstallProgressListener: () => void
 }
@@ -52,6 +62,12 @@ const api: ElectronAPI = {
   openDirectory: (dirPath: string) => ipcRenderer.invoke('open-directory', dirPath),
   getOpenClawSettings: () => ipcRenderer.invoke('get-openclaw-settings'),
   saveOpenClawSettings: (settings: OpenClawSettings) => ipcRenderer.invoke('save-openclaw-settings', settings),
+  getOpenClawPluginPresets: () => ipcRenderer.invoke('get-openclaw-plugin-presets'),
+  applyOpenClawPluginPreset: (presetId: string) => ipcRenderer.invoke('apply-openclaw-plugin-preset', presetId),
+  installOpenClawPluginPreset: (presetId: string) => ipcRenderer.invoke('install-openclaw-plugin-preset', presetId),
+  openOpenClawControlUi: () => ipcRenderer.invoke('open-openclaw-control-ui'),
+  exportOpenClawAgentBundle: (payload: { name: string; description: string }) => ipcRenderer.invoke('export-openclaw-agent-bundle', payload),
+  importOpenClawAgentBundle: () => ipcRenderer.invoke('import-openclaw-agent-bundle'),
   onInstallProgress: (callback) => {
     ipcRenderer.on('install-progress', (_: unknown, data: { stage: string; progress: number; detail?: string }) => callback(data))
   },

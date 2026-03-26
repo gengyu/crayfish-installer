@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { fileURLToPath } from 'url'
-import { basename, dirname, join } from 'path'
+import { basename, dirname, extname, join, relative } from 'path'
 import { exec, execSync } from 'child_process'
 import fs from 'fs'
 import os from 'os'
@@ -13,6 +13,12 @@ import { shellEnv } from 'shell-env'
 import { coerce, compare, gte } from 'semver'
 import sudoPrompt from 'sudo-prompt'
 import type { OpenClawSettings } from '../src/types'
+import type {
+  OpenClawAgentBundle,
+  OpenClawAgentBundleFile,
+  OpenClawAgentBundleResult,
+  OpenClawPluginPreset
+} from '../src/types'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -83,6 +89,47 @@ const NPM_REGISTRY = 'https://registry.npmmirror.com'
 const OPENCLAW_GATEWAY_PORT = 18789
 const OPENCLAW_CONFIG_DIR = join(os.homedir(), '.openclaw')
 const OPENCLAW_CONFIG_PATH = join(OPENCLAW_CONFIG_DIR, 'openclaw.json')
+const DEFAULT_OPENCLAW_WORKSPACE = join(OPENCLAW_CONFIG_DIR, 'workspace')
+const OPENCLAW_CONTROL_UI_URL = `http://127.0.0.1:${OPENCLAW_GATEWAY_PORT}`
+
+const OPENCLAW_PLUGIN_PRESETS: OpenClawPluginPreset[] = [
+  {
+    id: 'control-ui',
+    title: 'Control UI',
+    description: '官方建议先启用本地 Control UI，用浏览器完成日常配置和调试。',
+    installSource: null,
+    enableCommand: null,
+    category: 'ui',
+    recommended: true
+  },
+  {
+    id: 'memory-lancedb',
+    title: 'Memory LanceDB',
+    description: '把记忆能力落到向量库，适合长期助手和需要跨会话召回的智能体。',
+    installSource: null,
+    enableCommand: 'memory-lancedb',
+    category: 'memory',
+    recommended: true
+  },
+  {
+    id: 'open-prose',
+    title: 'Open Prose',
+    description: '官方多智能体/工作流插件，适合复杂任务编排和长链路执行。',
+    installSource: null,
+    enableCommand: 'open-prose',
+    category: 'workflow',
+    recommended: true
+  },
+  {
+    id: 'voice-call',
+    title: 'Voice Call',
+    description: '语音通话插件，适合语音交互场景。',
+    installSource: '@openclaw/voice-call',
+    enableCommand: 'voice-call',
+    category: 'channel',
+    recommended: false
+  }
+]
 
 function logStepStart(step: string, detail?: unknown) {
   if (detail === undefined) {
@@ -550,10 +597,137 @@ ipcMain.handle('save-openclaw-settings', async (_event, settings: OpenClawSettin
   }
 })
 
+ipcMain.handle('get-openclaw-plugin-presets', async () => {
+  return OPENCLAW_PLUGIN_PRESETS
+})
+
+ipcMain.handle('apply-openclaw-plugin-preset', async (_event, presetId: string) => {
+  const currentConfig = readOpenClawConfigFile()
+  const nextConfig = applyPluginPresetToConfig(currentConfig, presetId)
+
+  fs.mkdirSync(OPENCLAW_CONFIG_DIR, { recursive: true })
+  fs.writeFileSync(OPENCLAW_CONFIG_PATH, `${JSON.stringify(nextConfig, null, 2)}\n`, 'utf8')
+
+  return {
+    success: true,
+    configPath: OPENCLAW_CONFIG_PATH
+  }
+})
+
+ipcMain.handle('install-openclaw-plugin-preset', async (_event, presetId: string) => {
+  const preset = OPENCLAW_PLUGIN_PRESETS.find((item) => item.id === presetId)
+  if (!preset) {
+    throw new Error(`Unknown OpenClaw plugin preset: ${presetId}`)
+  }
+
+  if (preset.id === 'control-ui') {
+    await shell.openExternal(OPENCLAW_CONTROL_UI_URL)
+    return { success: true, message: `已打开 ${OPENCLAW_CONTROL_UI_URL}` }
+  }
+
+  const runtime = await getRuntimeStatus()
+  if (!runtime.openclaw.exists) {
+    throw new Error('当前未检测到 openclaw 命令，无法安装插件。')
+  }
+
+  const openclawCommand = getCommandPath(runtime.openclaw, 'openclaw')
+  if (preset.installSource) {
+    await runCommand(openclawCommand, ['plugins', 'install', preset.installSource])
+  }
+  if (preset.enableCommand) {
+    await runCommand(openclawCommand, ['plugins', 'enable', preset.enableCommand])
+  }
+
+  return { success: true, message: `已完成插件处理：${preset.title}` }
+})
+
+ipcMain.handle('open-openclaw-control-ui', async () => {
+  await shell.openExternal(OPENCLAW_CONTROL_UI_URL)
+  return {
+    success: true,
+    url: OPENCLAW_CONTROL_UI_URL
+  }
+})
+
+ipcMain.handle('export-openclaw-agent-bundle', async (_event, payload: { name: string; description: string }): Promise<OpenClawAgentBundleResult> => {
+  const settings = readOpenClawSettings()
+  const workspacePath = settings.workspacePath
+  const files = collectWorkspaceBundleFiles(workspacePath)
+
+  const saveResult = await dialog.showSaveDialog(mainWindow!, {
+    title: '导出 OpenClaw 智能体 Bundle',
+    defaultPath: join(os.homedir(), `${slugifyName(payload.name || 'openclaw-agent')}.openclaw-agent.json`),
+    filters: [
+      { name: 'OpenClaw Agent Bundle', extensions: ['json'] }
+    ]
+  })
+
+  if (saveResult.canceled || !saveResult.filePath) {
+    throw new Error('已取消导出')
+  }
+
+  const bundle: OpenClawAgentBundle = {
+    format: 'openclaw-agent-bundle',
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    metadata: {
+      name: (payload.name || basename(workspacePath)).trim() || basename(workspacePath),
+      description: (payload.description || '').trim(),
+      sourceWorkspace: workspacePath
+    },
+    files
+  }
+
+  fs.writeFileSync(saveResult.filePath, `${JSON.stringify(bundle, null, 2)}\n`, 'utf8')
+
+  return {
+    success: true,
+    path: saveResult.filePath,
+    fileCount: files.length,
+    workspacePath
+  }
+})
+
+ipcMain.handle('import-openclaw-agent-bundle', async (): Promise<OpenClawAgentBundleResult> => {
+  const settings = readOpenClawSettings()
+  const workspacePath = settings.workspacePath
+
+  const openResult = await dialog.showOpenDialog(mainWindow!, {
+    title: '导入 OpenClaw 智能体 Bundle',
+    properties: ['openFile'],
+    filters: [
+      { name: 'OpenClaw Agent Bundle', extensions: ['json'] }
+    ]
+  })
+
+  if (openResult.canceled || openResult.filePaths.length === 0) {
+    throw new Error('已取消导入')
+  }
+
+  const filePath = openResult.filePaths[0]
+  const parsed = JSON5.parse(fs.readFileSync(filePath, 'utf8')) as OpenClawAgentBundle
+  validateOpenClawAgentBundle(parsed)
+
+  fs.mkdirSync(workspacePath, { recursive: true })
+  for (const file of parsed.files) {
+    const targetPath = join(workspacePath, file.path)
+    fs.mkdirSync(dirname(targetPath), { recursive: true })
+    fs.writeFileSync(targetPath, file.content, 'utf8')
+  }
+
+  return {
+    success: true,
+    path: filePath,
+    fileCount: parsed.files.length,
+    workspacePath
+  }
+})
+
 function getDefaultOpenClawSettings(): OpenClawSettings {
   return {
     configPath: OPENCLAW_CONFIG_PATH,
     configDir: OPENCLAW_CONFIG_DIR,
+    workspacePath: DEFAULT_OPENCLAW_WORKSPACE,
     modelProviderId: 'custom-openai',
     modelBaseUrl: 'http://127.0.0.1:1234/v1',
     modelApiKey: 'local',
@@ -620,6 +794,7 @@ function normalizeOpenClawSettings(settings: OpenClawSettings): OpenClawSettings
     ...settings,
     configPath: OPENCLAW_CONFIG_PATH,
     configDir: OPENCLAW_CONFIG_DIR,
+    workspacePath: expandHomePath(settings.workspacePath || defaults.workspacePath),
     modelProviderId: (settings.modelProviderId || defaults.modelProviderId).trim(),
     modelBaseUrl: (settings.modelBaseUrl || defaults.modelBaseUrl).trim(),
     modelApiKey: (settings.modelApiKey || '').trim(),
@@ -640,6 +815,7 @@ function readOpenClawSettings(): OpenClawSettings {
   const agents = asRecord(config.agents)
   const defaultsSection = asRecord(agents.defaults)
   const modelSection = asRecord(defaultsSection.model)
+  const workspacePath = expandHomePath(readString(defaultsSection.workspace, defaults.workspacePath))
   const primaryModel = readString(modelSection.primary)
   const fallbackModels = readStringArray(modelSection.fallbacks)
   const [providerFromPrimary, modelIdFromPrimary] = primaryModel.includes('/')
@@ -669,6 +845,7 @@ function readOpenClawSettings(): OpenClawSettings {
     ...defaults,
     configPath: OPENCLAW_CONFIG_PATH,
     configDir: OPENCLAW_CONFIG_DIR,
+    workspacePath,
     modelProviderId: providerFromPrimary || defaults.modelProviderId,
     modelBaseUrl: readString(providerConfig.baseUrl, defaults.modelBaseUrl),
     modelApiKey: readString(providerConfig.apiKey, defaults.modelApiKey),
@@ -771,6 +948,7 @@ function applyOpenClawSettingsToConfig(currentConfig: OpenClawConfigObject, sett
       defaults: {
         ...asRecord(asRecord(currentConfig.agents).defaults),
         model: {
+          workspace: settings.workspacePath,
           primary: primaryModel,
           ...(fallbackModels.length > 0 ? { fallbacks: fallbackModels } : {})
         },
@@ -805,6 +983,148 @@ function applyOpenClawSettingsToConfig(currentConfig: OpenClawConfigObject, sett
   }
 
   return nextConfig
+}
+
+function expandHomePath(targetPath: string) {
+  if (targetPath.startsWith('~/')) {
+    return join(os.homedir(), targetPath.slice(2))
+  }
+
+  return targetPath
+}
+
+function applyPluginPresetToConfig(currentConfig: OpenClawConfigObject, presetId: string): OpenClawConfigObject {
+  const plugins = asRecord(currentConfig.plugins)
+  const entries = asRecord(plugins.entries)
+  const nextEntries = { ...entries }
+
+  switch (presetId) {
+    case 'memory-lancedb':
+      nextEntries['memory-lancedb'] = {
+        ...asRecord(entries['memory-lancedb']),
+        enabled: true
+      }
+      return {
+        ...currentConfig,
+        plugins: {
+          ...plugins,
+          slots: {
+            ...asRecord(plugins.slots),
+            memory: 'memory-lancedb'
+          },
+          entries: nextEntries
+        }
+      }
+    case 'open-prose':
+      nextEntries['open-prose'] = {
+        ...asRecord(entries['open-prose']),
+        enabled: true
+      }
+      return {
+        ...currentConfig,
+        plugins: {
+          ...plugins,
+          entries: nextEntries
+        }
+      }
+    case 'voice-call':
+      nextEntries['voice-call'] = {
+        ...asRecord(entries['voice-call']),
+        enabled: true
+      }
+      return {
+        ...currentConfig,
+        plugins: {
+          ...plugins,
+          entries: nextEntries
+        }
+      }
+    case 'control-ui':
+    default:
+      return currentConfig
+  }
+}
+
+function slugifyName(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'openclaw-agent'
+}
+
+function shouldSkipBundlePath(path: string) {
+  const blocked = [
+    '.git',
+    'node_modules',
+    '.DS_Store',
+    '.openclaw/sessions',
+    '.openclaw/cache',
+    '.openclaw/logs'
+  ]
+
+  return blocked.some((segment) => path === segment || path.startsWith(`${segment}/`))
+}
+
+function isTextBuffer(buffer: Buffer) {
+  return !buffer.includes(0)
+}
+
+function collectWorkspaceBundleFiles(workspacePath: string): OpenClawAgentBundleFile[] {
+  if (!fs.existsSync(workspacePath)) {
+    return []
+  }
+
+  const files: OpenClawAgentBundleFile[] = []
+
+  const walk = (currentPath: string) => {
+    const entries = fs.readdirSync(currentPath, { withFileTypes: true })
+    for (const entry of entries) {
+      const fullPath = join(currentPath, entry.name)
+      const relativePath = relative(workspacePath, fullPath).replace(/\\/g, '/')
+
+      if (shouldSkipBundlePath(relativePath)) {
+        continue
+      }
+
+      if (entry.isDirectory()) {
+        walk(fullPath)
+        continue
+      }
+
+      if (!entry.isFile()) {
+        continue
+      }
+
+      const buffer = fs.readFileSync(fullPath)
+      if (!isTextBuffer(buffer)) {
+        continue
+      }
+
+      files.push({
+        path: relativePath,
+        content: buffer.toString('utf8')
+      })
+    }
+  }
+
+  walk(workspacePath)
+  return files.sort((left, right) => left.path.localeCompare(right.path))
+}
+
+function validateOpenClawAgentBundle(bundle: OpenClawAgentBundle) {
+  if (!bundle || bundle.format !== 'openclaw-agent-bundle' || bundle.version !== 1 || !Array.isArray(bundle.files)) {
+    throw new Error('无效的 OpenClaw Agent Bundle 文件。')
+  }
+
+  for (const file of bundle.files) {
+    if (!file.path || file.path.includes('..') || file.path.startsWith('/')) {
+      throw new Error(`Bundle 中包含非法路径: ${file.path}`)
+    }
+    if (typeof file.content !== 'string') {
+      throw new Error(`Bundle 文件内容非法: ${file.path}`)
+    }
+  }
 }
 
 function sendProgress(

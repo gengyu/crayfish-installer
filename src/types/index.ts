@@ -27,6 +27,7 @@ export type OpenClawProviderApi =
 export interface OpenClawSettings {
   configPath: string
   configDir: string
+  workspacePath: string
   modelProviderId: string
   modelBaseUrl: string
   modelApiKey: string
@@ -43,4 +44,38 @@ export interface OpenClawSettings {
   slackAppToken: string
   slackUserToken: string
   slackUserTokenReadOnly: boolean
+}
+
+export interface OpenClawPluginPreset {
+  id: string
+  title: string
+  description: string
+  installSource: string | null
+  enableCommand: string | null
+  category: 'ui' | 'memory' | 'workflow' | 'channel'
+  recommended: boolean
+}
+
+export interface OpenClawAgentBundleFile {
+  path: string
+  content: string
+}
+
+export interface OpenClawAgentBundle {
+  format: 'openclaw-agent-bundle'
+  version: 1
+  exportedAt: string
+  metadata: {
+    name: string
+    description: string
+    sourceWorkspace: string
+  }
+  files: OpenClawAgentBundleFile[]
+}
+
+export interface OpenClawAgentBundleResult {
+  success: boolean
+  path: string
+  fileCount: number
+  workspacePath: string
 }
