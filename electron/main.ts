@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, nativeImage, shell } from 'electron'
 import { fileURLToPath } from 'url'
 import { basename, dirname, extname, join, relative } from 'path'
 import { exec, execSync } from 'child_process'
@@ -331,7 +331,11 @@ async function initializeRuntimeEnv() {
 
 function createWindow() {
   const isMac = process.platform === 'darwin'
-  const windowIcon = process.platform === 'linux' ? join(__dirname, '../build/icon.png') : undefined
+  const windowIcon = process.platform === 'win32'
+    ? join(__dirname, '../build/icon.ico')
+    : process.platform === 'linux'
+      ? join(__dirname, '../build/icon.png')
+      : undefined
 
   mainWindow = new BrowserWindow({
     width: 1040,
@@ -372,7 +376,26 @@ function createWindow() {
   })
 }
 
+function setAppDockIcon() {
+  if (process.platform !== 'darwin') {
+    return
+  }
+
+  const dockIconPath = join(__dirname, '../build/icon.png')
+  if (!fs.existsSync(dockIconPath)) {
+    return
+  }
+
+  const dockIcon = nativeImage.createFromPath(dockIconPath)
+  if (dockIcon.isEmpty()) {
+    return
+  }
+
+  app.dock.setIcon(dockIcon)
+}
+
 app.whenReady().then(() => {
+  setAppDockIcon()
   initializeRuntimeEnv()
     .catch((error) => {
       log.warn('Failed to initialize runtime env:', error)
