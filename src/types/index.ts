@@ -15,6 +15,31 @@ export interface ExistingInstall {
   version: { version: string; installDate: string } | null
 }
 
+export interface OpenClawUninstallOptions {
+  removeConfig: boolean
+  removeOpenClaw: boolean
+  removeNode: boolean
+  removeWorkspace: boolean
+}
+
+export interface OpenClawUninstallResult {
+  success: boolean
+  error?: string
+  removedItems?: string[]
+}
+
+export interface LocalModelDiscoveryResult {
+  source: 'ollama' | 'openai-compatible' | 'fallback'
+  modelIds: string[]
+  defaultModelId: string
+}
+
+export interface OpenClawModelConnectionResult {
+  success: boolean
+  message: string
+  modelIds: string[]
+}
+
 export type OpenClawChannelType = 'telegram' | 'discord' | 'slack' | 'none'
 export type OpenClawDmPolicy = 'pairing' | 'allowlist' | 'open' | 'disabled'
 export type OpenClawGroupPolicy = 'allowlist' | 'open' | 'disabled'
@@ -33,7 +58,7 @@ export interface OpenClawSettings {
   modelApiKey: string
   modelApi: OpenClawProviderApi
   modelId: string
-  fallbackModelId: string
+  fallbackModelIds: string[]
   channelType: OpenClawChannelType
   dmPolicy: OpenClawDmPolicy
   groupPolicy: OpenClawGroupPolicy

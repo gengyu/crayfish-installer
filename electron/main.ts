@@ -12,13 +12,36 @@ import { execa, execaCommand } from 'execa'
 import { shellEnv } from 'shell-env'
 import { coerce, compare, gte } from 'semver'
 import sudoPrompt from 'sudo-prompt'
-import type { OpenClawSettings } from '../src/types'
+import type { LocalModelDiscoveryResult, OpenClawModelConnectionResult, OpenClawSettings, OpenClawUninstallOptions, OpenClawUninstallResult } from '../src/types'
 import type {
   OpenClawAgentBundle,
   OpenClawAgentBundleFile,
   OpenClawAgentBundleResult,
   OpenClawPluginPreset
 } from '../src/types'
+import {
+  applyOpenClawSettingsToConfig as applyOpenClawSettingsToConfigHelper,
+  applyPluginPresetToConfig as applyPluginPresetToConfigHelper,
+  buildDiscordChannelConfig as buildDiscordChannelConfigHelper,
+  buildManagedProviderConfig as buildManagedProviderConfigHelper,
+  buildSlackChannelConfig as buildSlackChannelConfigHelper,
+  buildTelegramChannelConfig as buildTelegramChannelConfigHelper,
+  expandHomePath as expandHomePathHelper,
+  getDefaultOpenClawSettings as getDefaultOpenClawSettingsHelper,
+  isTextBuffer as isTextBufferHelper,
+  normalizeOpenClawSettings as normalizeOpenClawSettingsHelper,
+  readOpenClawSettingsFromConfig,
+  shouldSkipBundlePath as shouldSkipBundlePathHelper,
+  slugifyName as slugifyNameHelper
+} from '../src/lib/openclaw-config'
+import {
+  buildModelsEndpoint,
+  DEFAULT_LOCAL_MODEL_BASE_URL,
+  DEFAULT_LOCAL_MODEL_FALLBACK,
+  extractModelIds,
+  isDefaultLocalModelBaseUrl,
+  selectDefaultModelId
+} from '../src/lib/model-discovery'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -95,6 +118,13 @@ interface InstallResult {
   }
 }
 
+const DEFAULT_UNINSTALL_OPTIONS: OpenClawUninstallOptions = {
+  removeConfig: false,
+  removeOpenClaw: true,
+  removeNode: false,
+  removeWorkspace: false
+}
+
 type OpenClawChannelType = OpenClawSettings['channelType']
 
 interface OpenClawConfigObject {
@@ -110,6 +140,10 @@ const OPENCLAW_CONFIG_DIR = join(os.homedir(), '.openclaw')
 const OPENCLAW_CONFIG_PATH = join(OPENCLAW_CONFIG_DIR, 'openclaw.json')
 const DEFAULT_OPENCLAW_WORKSPACE = join(OPENCLAW_CONFIG_DIR, 'workspace')
 const OPENCLAW_CONTROL_UI_URL = `http://127.0.0.1:${OPENCLAW_GATEWAY_PORT}`
+const OPENCLAW_EXTENSIONS_DIR = join(OPENCLAW_CONFIG_DIR, 'extensions')
+const OPENCLAW_WEIXIN_PLUGIN_ID = 'openclaw-weixin'
+const OPENCLAW_WEIXIN_PLUGIN_DIR = join(OPENCLAW_EXTENSIONS_DIR, OPENCLAW_WEIXIN_PLUGIN_ID)
+const OPENCLAW_WEIXIN_PACKAGE_SPEC = '@tencent-weixin/openclaw-weixin@latest'
 
 const OPENCLAW_PLUGIN_PRESETS: OpenClawPluginPreset[] = [
   {
@@ -147,8 +181,26 @@ const OPENCLAW_PLUGIN_PRESETS: OpenClawPluginPreset[] = [
     enableCommand: 'voice-call',
     category: 'channel',
     recommended: false
+  },
+  {
+    id: 'wechat-clawbot',
+    title: '微信 ClawBot',
+    description: '按微信接入教程，在当前设备安装微信 ClawBot，并通过扫码把 OpenClaw 连接到微信。',
+    installSource: '@tencent-weixin/openclaw-weixin-cli@latest',
+    enableCommand: null,
+    category: 'channel',
+    recommended: true
   }
 ]
+
+function getOpenClawPaths() {
+  return {
+    configPath: OPENCLAW_CONFIG_PATH,
+    configDir: OPENCLAW_CONFIG_DIR,
+    defaultWorkspacePath: DEFAULT_OPENCLAW_WORKSPACE,
+    homedir: os.homedir()
+  }
+}
 
 function logStepStart(step: string, detail?: unknown) {
   if (detail === undefined) {
@@ -278,6 +330,9 @@ async function initializeRuntimeEnv() {
 }
 
 function createWindow() {
+  const isMac = process.platform === 'darwin'
+  const windowIcon = process.platform === 'linux' ? join(__dirname, '../build/icon.png') : undefined
+
   mainWindow = new BrowserWindow({
     width: 1040,
     height: 860,
@@ -289,7 +344,14 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false
     },
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    titleBarStyle: 'hidden',
+    titleBarOverlay: {
+      color: '#f8fafc',
+      symbolColor: '#475569',
+      height: isMac ? 56 : 32
+    },
+    ...(windowIcon ? { icon: windowIcon } : {}),
+    ...(isMac ? { trafficLightPosition: { x: 16, y: 16 } } : {}),
     autoHideMenuBar: true,
     show: false
   })
@@ -507,7 +569,7 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
     try {
       await runCommand(
         getCommandPath(runtimeAfterInstallCommand.commands.openclaw, 'openclaw'),
-        getDefaultOnboardArgs(),
+        await getDefaultOnboardArgs(),
         getPackageManagerEnv()
       )
       logStepDone('run-openclaw-onboard')
@@ -551,35 +613,57 @@ async function installOpenClawFlow(event: Electron.IpcMainInvokeEvent): Promise<
   }
 }
 
-ipcMain.handle('uninstall-openclaw', async (event) => {
+ipcMain.handle('uninstall-openclaw', async (event, payload?: { installPath?: string; options?: Partial<OpenClawUninstallOptions> }): Promise<OpenClawUninstallResult> => {
   try {
     logStepStart('uninstall-openclaw')
+    const options = normalizeUninstallOptions(payload?.options)
+    const settingsBeforeUninstall = readOpenClawSettings()
+    const removedItems: string[] = []
     const runtime = await getRuntimeStatus()
-    if (!runtime.commands.pnpm.exists && !runtime.commands.npm.exists) {
+    if (options.removeOpenClaw && !runtime.commands.pnpm.exists && !runtime.commands.npm.exists) {
       throw new Error('未检测到 pnpm 或 npm，无法执行一键卸载。')
     }
 
-    sendProgress(event, 'uninstalling', 30, '正在通过 pnpm 卸载 openclaw')
-    await uninstallOpenClawPackage(runtime)
-    await ensureGatewayStoppedAfterUninstall()
+    if (options.removeOpenClaw) {
+      sendProgress(event, 'uninstalling', 25, '正在移除 OpenClaw 主程序与 gateway 服务')
+      await uninstallOpenClawPackage(runtime)
+      await ensureGatewayStoppedAfterUninstall()
+      removedItems.push('OpenClaw 主程序与 gateway 服务')
 
-    sendProgress(event, 'uninstalling', 75, '正在校验 openclaw 命令是否已移除')
-    const runtimeAfterUninstall = await getRuntimeStatus()
-    const commandStillExists = hasOpenClawCommand(runtimeAfterUninstall)
+      sendProgress(event, 'uninstalling', 60, '正在校验 OpenClaw 是否已移除')
+      const runtimeAfterUninstall = await getRuntimeStatus()
+      const commandStillExists = hasOpenClawCommand(runtimeAfterUninstall)
 
-    if (commandStillExists) {
-      throw new Error('openclaw 卸载命令已执行，但系统里仍然检测到 openclaw 命令。')
+      if (commandStillExists) {
+        throw new Error('openclaw 卸载命令已执行，但系统里仍然检测到 openclaw 命令。')
+      }
+
+      if (runtimeAfterUninstall.gateway.running) {
+        throw new Error(`openclaw 命令已移除，但 ${OPENCLAW_GATEWAY_PORT} 端口上的 gateway 进程仍在运行。`)
+      }
     }
 
-    if (runtimeAfterUninstall.gateway.running) {
-      throw new Error(`openclaw 命令已移除，但 ${OPENCLAW_GATEWAY_PORT} 端口上的 gateway 进程仍在运行。`)
+    if (options.removeConfig) {
+      sendProgress(event, 'uninstalling', 72, '正在删除 OpenClaw 配置')
+      removeOpenClawConfig(settingsBeforeUninstall.configPath)
+      removedItems.push('OpenClaw 配置文件')
     }
 
-    sendProgress(event, 'uninstalling', 90, 'openclaw 命令和 gateway 进程都已移除')
+    if (options.removeWorkspace) {
+      sendProgress(event, 'uninstalling', 84, '正在删除 OpenClaw workspace')
+      removeDirectoryIfExists(settingsBeforeUninstall.workspacePath)
+      removedItems.push('OpenClaw workspace')
+    }
+
+    if (options.removeNode) {
+      sendProgress(event, 'uninstalling', 92, '正在删除 Node.js / pnpm 环境')
+      await removeManagedNodeEnvironment(runtime)
+      removedItems.push('Node.js / pnpm 环境')
+    }
 
     sendProgress(event, 'uninstalling', 100, '卸载完成')
     logStepDone('uninstall-openclaw')
-    return { success: true }
+    return { success: true, removedItems }
   } catch (error) {
     logStepFail('uninstall-openclaw', error)
     log.error('Uninstall failed:', error)
@@ -674,18 +758,6 @@ async function uninstallOpenClawPackage(runtime: RuntimeStatus) {
   const uninstallErrors: string[] = []
 
   if (runtime.commands.openclaw.path) {
-    try {
-      await runCommand(
-        getCommandPath(runtime.commands.openclaw, 'openclaw'),
-        ['uninstall', '--all', '--yes', '--non-interactive'],
-        packageManagerEnv
-      )
-      return
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      uninstallErrors.push(`openclaw uninstall --all --yes --non-interactive: ${message}`)
-    }
-
     await stopAndUninstallGatewayService(runtime)
   }
 
@@ -722,6 +794,90 @@ async function uninstallOpenClawPackage(runtime: RuntimeStatus) {
   throw new Error(uninstallErrors.join('\n\n'))
 }
 
+function normalizeUninstallOptions(options?: Partial<OpenClawUninstallOptions>): OpenClawUninstallOptions {
+  return {
+    removeConfig: Boolean(options?.removeConfig),
+    removeOpenClaw: options?.removeOpenClaw ?? DEFAULT_UNINSTALL_OPTIONS.removeOpenClaw,
+    removeNode: Boolean(options?.removeNode),
+    removeWorkspace: Boolean(options?.removeWorkspace)
+  }
+}
+
+function removeOpenClawConfig(configPath: string) {
+  if (fs.existsSync(configPath)) {
+    fs.rmSync(configPath, { force: true })
+  }
+
+  const configDir = dirname(configPath)
+  if (fs.existsSync(configDir) && fs.readdirSync(configDir).length === 0) {
+    fs.rmSync(configDir, { recursive: true, force: true })
+  }
+}
+
+function removeDirectoryIfExists(targetPath: string) {
+  if (!targetPath || !fs.existsSync(targetPath)) {
+    return
+  }
+
+  fs.rmSync(targetPath, { recursive: true, force: true })
+}
+
+async function removeManagedNodeEnvironment(runtime: RuntimeStatus) {
+  const candidatePaths = new Set<string>()
+  const addCandidate = (targetPath: string | null | undefined) => {
+    if (!targetPath) {
+      return
+    }
+
+    candidatePaths.add(targetPath)
+
+    const normalized = targetPath.replace(/\\/g, '/')
+    const binDir = dirname(targetPath)
+
+    if (process.platform === 'win32' && normalized.includes('/nodejs/')) {
+      candidatePaths.add(binDir)
+    }
+
+    if (process.platform === 'win32' && normalized.includes('/pnpm/')) {
+      candidatePaths.add(binDir)
+    }
+
+    if (process.platform !== 'win32') {
+      if (normalized.endsWith('/bin/node')) {
+        candidatePaths.add(join(dirname(binDir), 'lib', 'node_modules'))
+        candidatePaths.add(join(dirname(binDir), 'include', 'node'))
+        candidatePaths.add(join(dirname(binDir), 'share', 'man', 'man1', 'node.1'))
+      }
+
+      if (normalized.endsWith('/bin/pnpm') || normalized.endsWith('/bin/npm')) {
+        candidatePaths.add(targetPath)
+      }
+    }
+  }
+
+  addCandidate(runtime.commands.node.path)
+  addCandidate(runtime.commands.npm.path)
+  addCandidate(runtime.commands.pnpm.path)
+
+  const removablePaths = Array.from(candidatePaths).filter(targetPath => {
+    if (!fs.existsSync(targetPath)) {
+      return false
+    }
+
+    const normalized = targetPath.replace(/\\/g, '/')
+    if (process.platform === 'win32') {
+      return normalized.includes('/nodejs/') || normalized.includes('/pnpm/') || normalized.endsWith('/pnpm')
+    }
+
+    return normalized.startsWith('/usr/local/')
+      || normalized.startsWith('/opt/homebrew/')
+  })
+
+  for (const targetPath of removablePaths) {
+    fs.rmSync(targetPath, { recursive: true, force: true })
+  }
+}
+
 ipcMain.handle('launch-openclaw', async () => {
   try {
     logStepStart('launch-check')
@@ -744,12 +900,25 @@ ipcMain.handle('open-directory', async (_event, dirPath: string) => {
 })
 
 ipcMain.handle('get-openclaw-settings', async () => {
-  return readOpenClawSettings()
+  const currentConfig = readOpenClawConfigFile()
+  const settings = readOpenClawSettingsFromConfig(currentConfig, getOpenClawPaths())
+  return resolveSettingsModelId(currentConfig, settings)
+})
+
+ipcMain.handle('get-local-model-discovery', async (): Promise<LocalModelDiscoveryResult> => {
+  return discoverLocalModelIds(DEFAULT_LOCAL_MODEL_BASE_URL, DEFAULT_LOCAL_MODEL_FALLBACK)
+})
+
+ipcMain.handle('test-openclaw-model-connection', async (_event, settings: OpenClawSettings): Promise<OpenClawModelConnectionResult> => {
+  return testOpenClawModelConnection(normalizeOpenClawSettings(settings))
 })
 
 ipcMain.handle('save-openclaw-settings', async (_event, settings: OpenClawSettings) => {
-  const validatedSettings = normalizeOpenClawSettings(settings)
   const currentConfig = readOpenClawConfigFile()
+  const validatedSettings = await resolveSettingsModelId(
+    currentConfig,
+    normalizeOpenClawSettings(settings)
+  )
   const nextConfig = applyOpenClawSettingsToConfig(currentConfig, validatedSettings)
 
   fs.mkdirSync(OPENCLAW_CONFIG_DIR, { recursive: true })
@@ -785,13 +954,48 @@ ipcMain.handle('install-openclaw-plugin-preset', async (_event, presetId: string
   }
 
   if (preset.id === 'control-ui') {
-    await shell.openExternal(OPENCLAW_CONTROL_UI_URL)
-    return { success: true, message: `已打开 ${OPENCLAW_CONTROL_UI_URL}` }
+    const controlUiUrl = buildOpenClawControlUiUrl()
+    await shell.openExternal(controlUiUrl)
+    return { success: true, message: `已打开 ${controlUiUrl}` }
   }
 
   const runtime = await getRuntimeStatus()
   if (!hasOpenClawCommand(runtime)) {
     throw new Error('当前未检测到 openclaw 命令，无法安装插件。')
+  }
+
+  if (preset.id === 'wechat-clawbot') {
+    const currentConfig = readOpenClawConfigFile()
+    const preparedConfig = prepareWeixinInstallConfig(currentConfig)
+    if (JSON.stringify(preparedConfig) !== JSON.stringify(currentConfig)) {
+      fs.mkdirSync(OPENCLAW_CONFIG_DIR, { recursive: true })
+      fs.writeFileSync(OPENCLAW_CONFIG_PATH, `${JSON.stringify(preparedConfig, null, 2)}\n`, 'utf8')
+    }
+
+    if (fs.existsSync(join(OPENCLAW_WEIXIN_PLUGIN_DIR, 'package.json'))) {
+      await openWeixinLoginInTerminal(runtime)
+      return {
+        success: true,
+        message: '已检测到本机微信 ClawBot 插件，已直接打开终端进行扫码登录。'
+      }
+    }
+
+    try {
+      await openWeixinTutorialInstallInTerminal(runtime)
+      return {
+        success: true,
+        message: '已按官方教程打开微信 ClawBot 安装终端。请在终端里扫码完成连接。'
+      }
+    } catch (tutorialError) {
+      log.warn('Failed to launch tutorial install flow, falling back to manual weixin install:', tutorialError)
+      await ensureWeixinPluginInstalled(runtime)
+      await openWeixinLoginInTerminal(runtime)
+    }
+
+    return {
+      success: true,
+      message: '官方教程安装未能直接启动，已切换到独立微信安装流程并打开终端扫码登录。'
+    }
   }
 
   const openclawCommand = getCommandPath(runtime.commands.openclaw, 'openclaw')
@@ -806,10 +1010,11 @@ ipcMain.handle('install-openclaw-plugin-preset', async (_event, presetId: string
 })
 
 ipcMain.handle('open-openclaw-control-ui', async () => {
-  await shell.openExternal(OPENCLAW_CONTROL_UI_URL)
+  const controlUiUrl = buildOpenClawControlUiUrl()
+  await shell.openExternal(controlUiUrl)
   return {
     success: true,
-    url: OPENCLAW_CONTROL_UI_URL
+    url: controlUiUrl
   }
 })
 
@@ -888,27 +1093,7 @@ ipcMain.handle('import-openclaw-agent-bundle', async (): Promise<OpenClawAgentBu
 })
 
 function getDefaultOpenClawSettings(): OpenClawSettings {
-  return {
-    configPath: OPENCLAW_CONFIG_PATH,
-    configDir: OPENCLAW_CONFIG_DIR,
-    workspacePath: DEFAULT_OPENCLAW_WORKSPACE,
-    modelProviderId: 'custom-openai',
-    modelBaseUrl: 'http://127.0.0.1:1234/v1',
-    modelApiKey: 'local',
-    modelApi: 'openai-responses',
-    modelId: 'minimax-m2.5-gs32',
-    fallbackModelId: '',
-    channelType: 'telegram',
-    dmPolicy: 'pairing',
-    groupPolicy: 'disabled',
-    telegramBotToken: '',
-    telegramRequireMention: true,
-    discordBotToken: '',
-    slackBotToken: '',
-    slackAppToken: '',
-    slackUserToken: '',
-    slackUserTokenReadOnly: true
-  }
+  return getDefaultOpenClawSettingsHelper(getOpenClawPaths())
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -951,287 +1136,98 @@ function readOpenClawConfigFile(): OpenClawConfigObject {
 }
 
 function normalizeOpenClawSettings(settings: OpenClawSettings): OpenClawSettings {
-  const defaults = getDefaultOpenClawSettings()
-
-  return {
-    ...defaults,
-    ...settings,
-    configPath: OPENCLAW_CONFIG_PATH,
-    configDir: OPENCLAW_CONFIG_DIR,
-    workspacePath: expandHomePath(settings.workspacePath || defaults.workspacePath),
-    modelProviderId: (settings.modelProviderId || defaults.modelProviderId).trim(),
-    modelBaseUrl: (settings.modelBaseUrl || defaults.modelBaseUrl).trim(),
-    modelApiKey: (settings.modelApiKey || '').trim(),
-    modelId: (settings.modelId || defaults.modelId).trim(),
-    fallbackModelId: (settings.fallbackModelId || '').trim(),
-    telegramBotToken: (settings.telegramBotToken || '').trim(),
-    discordBotToken: (settings.discordBotToken || '').trim(),
-    slackBotToken: (settings.slackBotToken || '').trim(),
-    slackAppToken: (settings.slackAppToken || '').trim(),
-    slackUserToken: (settings.slackUserToken || '').trim(),
-    channelType: isChannelType(settings.channelType) ? settings.channelType : defaults.channelType
-  }
+  return normalizeOpenClawSettingsHelper(settings, getOpenClawPaths())
 }
 
 function readOpenClawSettings(): OpenClawSettings {
-  const defaults = getDefaultOpenClawSettings()
+  return readOpenClawSettingsFromConfig(readOpenClawConfigFile(), getOpenClawPaths())
+}
+
+function buildOpenClawControlUiUrl() {
   const config = readOpenClawConfigFile()
-  const agents = asRecord(config.agents)
-  const defaultsSection = asRecord(agents.defaults)
-  const modelSection = asRecord(defaultsSection.model)
-  const workspacePath = expandHomePath(readString(defaultsSection.workspace, defaults.workspacePath))
-  const primaryModel = readString(modelSection.primary)
-  const fallbackModels = readStringArray(modelSection.fallbacks)
-  const [providerFromPrimary, modelIdFromPrimary] = primaryModel.includes('/')
-    ? primaryModel.split(/\/(.+)/, 2)
-    : [defaults.modelProviderId, defaults.modelId]
+  const gatewayConfig = asRecord(config.gateway)
+  const authConfig = asRecord(gatewayConfig.auth)
+  const configuredPort = typeof gatewayConfig.port === 'number'
+    ? gatewayConfig.port
+    : Number(readString(gatewayConfig.port, String(OPENCLAW_GATEWAY_PORT))) || OPENCLAW_GATEWAY_PORT
+  const token = readString(authConfig.token).trim()
 
-  const models = asRecord(config.models)
-  const providers = asRecord(models.providers)
-  const providerConfig = asRecord(providers[providerFromPrimary || defaults.modelProviderId])
+  const url = new URL(`http://127.0.0.1:${configuredPort}`)
+  if (token) {
+    url.hash = `token=${token}`
+  }
 
-  const channels = asRecord(config.channels)
-  const telegramConfig = asRecord(channels.telegram)
-  const telegramGroups = asRecord(telegramConfig.groups)
-  const telegramWildcardGroup = asRecord(telegramGroups['*'])
-  const discordConfig = asRecord(channels.discord)
-  const slackConfig = asRecord(channels.slack)
-
-  const detectedChannelType: OpenClawChannelType = telegramConfig.enabled === true
-    ? 'telegram'
-    : discordConfig.enabled === true
-      ? 'discord'
-      : slackConfig.enabled === true
-        ? 'slack'
-        : defaults.channelType
-
-  return normalizeOpenClawSettings({
-    ...defaults,
-    configPath: OPENCLAW_CONFIG_PATH,
-    configDir: OPENCLAW_CONFIG_DIR,
-    workspacePath,
-    modelProviderId: providerFromPrimary || defaults.modelProviderId,
-    modelBaseUrl: readString(providerConfig.baseUrl, defaults.modelBaseUrl),
-    modelApiKey: readString(providerConfig.apiKey, defaults.modelApiKey),
-    modelApi: (readString(providerConfig.api, defaults.modelApi) as OpenClawSettings['modelApi']),
-    modelId: modelIdFromPrimary || defaults.modelId,
-    fallbackModelId: fallbackModels[0] || '',
-    channelType: detectedChannelType,
-    dmPolicy: (readString(
-      detectedChannelType === 'telegram'
-        ? telegramConfig.dmPolicy
-        : detectedChannelType === 'discord'
-          ? discordConfig.dmPolicy
-          : slackConfig.dmPolicy,
-      defaults.dmPolicy
-    ) as OpenClawSettings['dmPolicy']),
-    groupPolicy: (readString(
-      detectedChannelType === 'telegram'
-        ? telegramConfig.groupPolicy
-        : detectedChannelType === 'discord'
-          ? discordConfig.groupPolicy
-          : slackConfig.groupPolicy,
-      defaults.groupPolicy
-    ) as OpenClawSettings['groupPolicy']),
-    telegramBotToken: readString(telegramConfig.botToken),
-    telegramRequireMention: readBoolean(telegramWildcardGroup.requireMention, defaults.telegramRequireMention),
-    discordBotToken: readString(discordConfig.token),
-    slackBotToken: readString(slackConfig.botToken),
-    slackAppToken: readString(slackConfig.appToken),
-    slackUserToken: readString(slackConfig.userToken),
-    slackUserTokenReadOnly: readBoolean(slackConfig.userTokenReadOnly, defaults.slackUserTokenReadOnly)
-  })
+  return url.toString()
 }
 
 function buildManagedProviderConfig(settings: OpenClawSettings) {
-  return {
-    api: settings.modelApi,
-    baseUrl: settings.modelBaseUrl,
-    apiKey: settings.modelApiKey,
-    models: [
-      { id: settings.modelId }
-    ]
-  }
+  return buildManagedProviderConfigHelper(settings)
 }
 
 function buildTelegramChannelConfig(settings: OpenClawSettings) {
-  return {
-    enabled: settings.channelType === 'telegram',
-    botToken: settings.telegramBotToken,
-    dmPolicy: settings.dmPolicy,
-    groupPolicy: settings.groupPolicy,
-    groups: {
-      '*': {
-        requireMention: settings.telegramRequireMention
-      }
-    }
-  }
+  return buildTelegramChannelConfigHelper(settings)
 }
 
 function buildDiscordChannelConfig(settings: OpenClawSettings) {
-  return {
-    enabled: settings.channelType === 'discord',
-    token: settings.discordBotToken,
-    dmPolicy: settings.dmPolicy,
-    groupPolicy: settings.groupPolicy
-  }
+  return buildDiscordChannelConfigHelper(settings)
 }
 
 function buildSlackChannelConfig(settings: OpenClawSettings) {
-  return {
-    enabled: settings.channelType === 'slack',
-    botToken: settings.slackBotToken,
-    appToken: settings.slackAppToken,
-    userToken: settings.slackUserToken,
-    userTokenReadOnly: settings.slackUserTokenReadOnly,
-    dmPolicy: settings.dmPolicy,
-    groupPolicy: settings.groupPolicy
-  }
+  return buildSlackChannelConfigHelper(settings)
 }
 
 function applyOpenClawSettingsToConfig(currentConfig: OpenClawConfigObject, settings: OpenClawSettings): OpenClawConfigObject {
-  const providerId = settings.modelProviderId
-  const primaryModel = `${providerId}/${settings.modelId}`
-  const fallbackModels = settings.fallbackModelId.trim() ? [`${providerId}/${settings.fallbackModelId.trim()}`] : []
-
-  const nextConfig = {
-    ...currentConfig,
-    models: {
-      ...asRecord(currentConfig.models),
-      mode: 'merge',
-      providers: {
-        ...asRecord(asRecord(currentConfig.models).providers),
-        [providerId]: {
-          ...asRecord(asRecord(asRecord(currentConfig.models).providers)[providerId]),
-          ...buildManagedProviderConfig(settings)
-        }
-      }
-    },
-    agents: {
-      ...asRecord(currentConfig.agents),
-      defaults: {
-        ...asRecord(asRecord(currentConfig.agents).defaults),
-        model: {
-          workspace: settings.workspacePath,
-          primary: primaryModel,
-          ...(fallbackModels.length > 0 ? { fallbacks: fallbackModels } : {})
-        },
-        models: {
-          ...asRecord(asRecord(asRecord(currentConfig.agents).defaults).models),
-          [primaryModel]: {
-            alias: settings.modelId
-          },
-          ...(fallbackModels.length > 0 ? {
-            [fallbackModels[0]]: {
-              alias: settings.fallbackModelId
-            }
-          } : {})
-        }
-      }
-    },
-    channels: {
-      ...asRecord(currentConfig.channels),
-      telegram: {
-        ...asRecord(asRecord(currentConfig.channels).telegram),
-        ...buildTelegramChannelConfig(settings)
-      },
-      discord: {
-        ...asRecord(asRecord(currentConfig.channels).discord),
-        ...buildDiscordChannelConfig(settings)
-      },
-      slack: {
-        ...asRecord(asRecord(currentConfig.channels).slack),
-        ...buildSlackChannelConfig(settings)
-      }
-    }
-  }
-
-  return nextConfig
+  return applyOpenClawSettingsToConfigHelper(currentConfig, settings)
 }
 
 function expandHomePath(targetPath: string) {
-  if (targetPath.startsWith('~/')) {
-    return join(os.homedir(), targetPath.slice(2))
-  }
-
-  return targetPath
+  return expandHomePathHelper(targetPath, os.homedir())
 }
 
 function applyPluginPresetToConfig(currentConfig: OpenClawConfigObject, presetId: string): OpenClawConfigObject {
-  const plugins = asRecord(currentConfig.plugins)
-  const entries = asRecord(plugins.entries)
-  const nextEntries = { ...entries }
+  return applyPluginPresetToConfigHelper(currentConfig, presetId as OpenClawPluginPreset['id'])
+}
 
-  switch (presetId) {
-    case 'memory-lancedb':
-      nextEntries['memory-lancedb'] = {
-        ...asRecord(entries['memory-lancedb']),
+function prepareWeixinInstallConfig(currentConfig: OpenClawConfigObject): OpenClawConfigObject {
+  const nextConfig = { ...currentConfig }
+  const plugins = asRecord(nextConfig.plugins)
+  const entries = { ...asRecord(plugins.entries) }
+  const allow = readStringArray(plugins.allow)
+  const channels = asRecord(nextConfig.channels)
+  const weixinChannel = asRecord(channels[OPENCLAW_WEIXIN_PLUGIN_ID])
+
+  entries[OPENCLAW_WEIXIN_PLUGIN_ID] = {
+    ...asRecord(entries[OPENCLAW_WEIXIN_PLUGIN_ID]),
+    enabled: true
+  }
+
+  return {
+    ...nextConfig,
+    plugins: {
+      ...plugins,
+      allow: Array.from(new Set([...allow, OPENCLAW_WEIXIN_PLUGIN_ID])),
+      entries
+    },
+    channels: {
+      ...channels,
+      [OPENCLAW_WEIXIN_PLUGIN_ID]: {
+        ...weixinChannel,
         enabled: true
       }
-      return {
-        ...currentConfig,
-        plugins: {
-          ...plugins,
-          slots: {
-            ...asRecord(plugins.slots),
-            memory: 'memory-lancedb'
-          },
-          entries: nextEntries
-        }
-      }
-    case 'open-prose':
-      nextEntries['open-prose'] = {
-        ...asRecord(entries['open-prose']),
-        enabled: true
-      }
-      return {
-        ...currentConfig,
-        plugins: {
-          ...plugins,
-          entries: nextEntries
-        }
-      }
-    case 'voice-call':
-      nextEntries['voice-call'] = {
-        ...asRecord(entries['voice-call']),
-        enabled: true
-      }
-      return {
-        ...currentConfig,
-        plugins: {
-          ...plugins,
-          entries: nextEntries
-        }
-      }
-    case 'control-ui':
-    default:
-      return currentConfig
+    }
   }
 }
 
 function slugifyName(name: string) {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || 'openclaw-agent'
+  return slugifyNameHelper(name)
 }
 
 function shouldSkipBundlePath(path: string) {
-  const blocked = [
-    '.git',
-    'node_modules',
-    '.DS_Store',
-    '.openclaw/sessions',
-    '.openclaw/cache',
-    '.openclaw/logs'
-  ]
-
-  return blocked.some((segment) => path === segment || path.startsWith(`${segment}/`))
+  return shouldSkipBundlePathHelper(path)
 }
 
 function isTextBuffer(buffer: Buffer) {
-  return !buffer.includes(0)
+  return isTextBufferHelper(buffer)
 }
 
 function collectWorkspaceBundleFiles(workspacePath: string): OpenClawAgentBundleFile[] {
@@ -1570,6 +1566,64 @@ function runCommand(command: string, args: string[], extraEnv: Record<string, st
   return run()
 }
 
+function runCommandInDir(command: string, args: string[], cwd: string, extraEnv: Record<string, string> = {}): Promise<string> {
+  const env = withNormalizedPathEnv({
+    ...resolvedRuntimeEnv,
+    ...extraEnv
+  }, buildRuntimePath(getPathEnv(extraEnv)))
+  const displayCommand = [command, ...args].join(' ')
+
+  log.info('[COMMAND START]', {
+    command,
+    args,
+    cwd,
+    displayCommand,
+    path: getPathEnv(env)
+  })
+
+  const run = async () => {
+    try {
+      const result = await execa(command, args, {
+        cwd,
+        env,
+        windowsHide: true,
+        shell: false
+      })
+
+      log.info('[COMMAND DONE]', {
+        command: displayCommand,
+        cwd,
+        code: result.exitCode,
+        stdout: summarizeOutput(result.stdout),
+        stderr: summarizeOutput(result.stderr)
+      })
+
+      return result.stdout || result.stderr
+    } catch (error) {
+      const execaError = error as {
+        shortMessage?: string
+        stderr?: string
+        stdout?: string
+        exitCode?: number
+        message?: string
+      }
+
+      log.error('[COMMAND FAIL]', {
+        command: displayCommand,
+        cwd,
+        code: execaError.exitCode ?? 'unknown',
+        stdout: summarizeOutput(execaError.stdout || ''),
+        stderr: summarizeOutput(execaError.stderr || ''),
+        message: execaError.shortMessage || execaError.message || 'command failed'
+      })
+
+      throw new Error((execaError.stderr || execaError.stdout || execaError.shortMessage || execaError.message || `${command} 执行失败`).trim())
+    }
+  }
+
+  return run()
+}
+
 function runShellCommand(command: string, extraEnv: Record<string, string> = {}): Promise<string> {
   const shellPath = process.platform === 'win32'
     ? (resolvedRuntimeEnv.ComSpec || process.env.ComSpec || 'cmd.exe')
@@ -1702,6 +1756,110 @@ function downloadFile(url: string, destination: string, onProgress?: (progress: 
       fail(error)
     })
   })
+}
+
+async function ensureWeixinPluginInstalled(runtime: RuntimeStatus) {
+  const packageJsonPath = join(OPENCLAW_WEIXIN_PLUGIN_DIR, 'package.json')
+  if (fs.existsSync(packageJsonPath)) {
+    return OPENCLAW_WEIXIN_PLUGIN_DIR
+  }
+
+  fs.rmSync(OPENCLAW_WEIXIN_PLUGIN_DIR, { recursive: true, force: true })
+  fs.mkdirSync(OPENCLAW_WEIXIN_PLUGIN_DIR, { recursive: true })
+
+  const defaultPluginDir = join(OPENCLAW_CONFIG_DIR, 'extensions', OPENCLAW_WEIXIN_PLUGIN_ID)
+  if (defaultPluginDir !== OPENCLAW_WEIXIN_PLUGIN_DIR && fs.existsSync(join(defaultPluginDir, 'package.json'))) {
+    fs.cpSync(defaultPluginDir, OPENCLAW_WEIXIN_PLUGIN_DIR, { recursive: true })
+    return OPENCLAW_WEIXIN_PLUGIN_DIR
+  }
+
+  const tarballUrl = await resolveWeixinTarballUrl(runtime)
+  const archivePath = join(os.tmpdir(), `openclaw-weixin-${Date.now()}.tgz`)
+  await downloadFile(tarballUrl, archivePath)
+  await runCommand('tar', ['-xzf', archivePath, '-C', OPENCLAW_WEIXIN_PLUGIN_DIR, '--strip-components=1'])
+
+  const packageManagerEnv = getPackageManagerEnv()
+  if (runtime.commands.pnpm.exists) {
+    await ensurePnpmHomeConfigured(runtime.commands.pnpm.path)
+    await runCommandInDir(getCommandPath(runtime.commands.pnpm, 'pnpm'), ['install', '--prod', '--ignore-scripts'], OPENCLAW_WEIXIN_PLUGIN_DIR, packageManagerEnv)
+  } else if (runtime.commands.npm.exists) {
+    await runCommandInDir(getCommandPath(runtime.commands.npm, 'npm'), ['install', '--omit=dev', '--ignore-scripts'], OPENCLAW_WEIXIN_PLUGIN_DIR, packageManagerEnv)
+  } else {
+    throw new Error('未检测到 pnpm 或 npm，无法安装微信 ClawBot 依赖。')
+  }
+
+  fs.rmSync(archivePath, { force: true })
+  return OPENCLAW_WEIXIN_PLUGIN_DIR
+}
+
+async function resolveWeixinTarballUrl(runtime: RuntimeStatus) {
+  if (runtime.commands.pnpm.exists) {
+    const output = await runCommand(getCommandPath(runtime.commands.pnpm, 'pnpm'), ['view', OPENCLAW_WEIXIN_PACKAGE_SPEC, 'dist.tarball'], getPackageManagerEnv())
+    const url = output.trim().split('\n').pop()?.trim()
+    if (url) {
+      return url
+    }
+  }
+
+  if (runtime.commands.npm.exists) {
+    const output = await runCommand(getCommandPath(runtime.commands.npm, 'npm'), ['view', OPENCLAW_WEIXIN_PACKAGE_SPEC, 'dist.tarball'], getPackageManagerEnv())
+    const url = output.trim().split('\n').pop()?.trim()
+    if (url) {
+      return url
+    }
+  }
+
+  throw new Error('无法解析微信 ClawBot 插件下载地址。')
+}
+
+async function openWeixinLoginInTerminal(runtime: RuntimeStatus) {
+  const currentSettings = readOpenClawSettings()
+  const loginEnv = {
+    ...getPackageManagerEnv(),
+    OPENAI_API_KEY: getEnvValue(resolvedRuntimeEnv, 'OPENAI_API_KEY') || currentSettings.modelApiKey || 'local'
+  }
+  const loginCommand = `OPENAI_API_KEY=${shellEscape(loginEnv.OPENAI_API_KEY)} openclaw channels login --channel ${OPENCLAW_WEIXIN_PLUGIN_ID} --verbose`
+
+  if (process.platform === 'darwin') {
+    const script = `tell application "Terminal" to do script ${toAppleScriptString(loginCommand)}`
+    await runCommand('osascript', ['-e', script, '-e', 'tell application "Terminal" to activate'])
+    return
+  }
+
+  if (process.platform === 'win32') {
+    await runShellCommand(`start "" cmd /k ${loginCommand}`, loginEnv)
+    return
+  }
+
+  await runShellCommand(`x-terminal-emulator -e ${loginCommand}`, loginEnv)
+}
+
+async function openWeixinTutorialInstallInTerminal(runtime: RuntimeStatus) {
+  const packageManagerEnv = getPackageManagerEnv()
+  const installCommand = runtime.commands.pnpm.exists
+    ? `pnpm dlx @tencent-weixin/openclaw-weixin-cli@latest install`
+    : `npx -y @tencent-weixin/openclaw-weixin-cli@latest install`
+
+  if (process.platform === 'darwin') {
+    const script = `tell application "Terminal" to do script ${toAppleScriptString(installCommand)}`
+    await runCommand('osascript', ['-e', script, '-e', 'tell application "Terminal" to activate'], packageManagerEnv)
+    return
+  }
+
+  if (process.platform === 'win32') {
+    await runShellCommand(`start "" cmd /k ${installCommand}`, packageManagerEnv)
+    return
+  }
+
+  await runShellCommand(`x-terminal-emulator -e ${installCommand}`, packageManagerEnv)
+}
+
+function shellEscape(value: string) {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+function toAppleScriptString(value: string) {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
 }
 
 async function ensureMirrorConfigured() {
@@ -2172,7 +2330,9 @@ function getPackageManagerEnv() {
   }
 }
 
-function getDefaultOnboardArgs() {
+async function getDefaultOnboardArgs() {
+  const defaultModelId = await resolvePreferredLocalModelId(DEFAULT_LOCAL_MODEL_BASE_URL, DEFAULT_LOCAL_MODEL_FALLBACK)
+
   return [
     'onboard',
     '--non-interactive',
@@ -2182,9 +2342,9 @@ function getDefaultOnboardArgs() {
     '--auth-choice',
     'custom-api-key',
     '--custom-base-url',
-    'http://127.0.0.1:1234/v1',
+    DEFAULT_LOCAL_MODEL_BASE_URL,
     '--custom-model-id',
-    'minimax-m2.5-gs32',
+    defaultModelId,
     '--custom-compatibility',
     'openai',
     '--custom-api-key',
@@ -2200,6 +2360,145 @@ function getDefaultOnboardArgs() {
     'node',
     '--skip-skills'
   ]
+}
+
+function buildModelRequestHeaders(apiKey?: string) {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'User-Agent': 'Crayfish-Installer'
+  }
+
+  const normalizedApiKey = (apiKey || '').trim()
+  if (normalizedApiKey && normalizedApiKey !== 'local') {
+    headers.Authorization = `Bearer ${normalizedApiKey}`
+    headers['x-api-key'] = normalizedApiKey
+  }
+
+  return headers
+}
+
+async function fetchAvailableModelIds(baseUrl: string, apiKey?: string) {
+  const endpoint = buildModelsEndpoint(baseUrl)
+  if (!endpoint) {
+    return []
+  }
+
+  const response = await fetch(endpoint, {
+    method: 'GET',
+    headers: buildModelRequestHeaders(apiKey),
+    signal: AbortSignal.timeout(2000)
+  })
+
+  if (!response.ok) {
+    throw new Error(`获取模型列表失败: HTTP ${response.status}`)
+  }
+
+  return extractModelIds(await response.json())
+}
+
+async function fetchOllamaModelIds() {
+  try {
+    const ollamaPath = await whichCommand('ollama')
+    if (!ollamaPath) {
+      return []
+    }
+
+    const output = await runCommand(ollamaPath, ['list'])
+    return output
+      .split('\n')
+      .slice(1)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => line.split(/\s+/)[0])
+      .filter(Boolean)
+  } catch (error) {
+    log.warn('Failed to read local Ollama model list:', error)
+    return []
+  }
+}
+
+async function discoverLocalModelIds(baseUrl: string, fallback: string): Promise<LocalModelDiscoveryResult> {
+  const ollamaModelIds = await fetchOllamaModelIds()
+  if (ollamaModelIds.length > 0) {
+    const defaultModelId = selectDefaultModelId(ollamaModelIds, fallback)
+    log.info('[LOCAL MODEL DISCOVERY][OLLAMA]', { modelIds: ollamaModelIds, defaultModelId })
+    return {
+      source: 'ollama',
+      modelIds: ollamaModelIds,
+      defaultModelId
+    }
+  }
+
+  try {
+    const modelIds = await fetchAvailableModelIds(baseUrl)
+    const defaultModelId = selectDefaultModelId(modelIds, fallback)
+    log.info('[LOCAL MODEL DISCOVERY][OPENAI-COMPATIBLE]', { baseUrl, modelIds, defaultModelId })
+    return {
+      source: 'openai-compatible',
+      modelIds,
+      defaultModelId
+    }
+  } catch (error) {
+    log.warn('Failed to fetch local model list, using fallback model id:', error)
+    return {
+      source: 'fallback',
+      modelIds: [],
+      defaultModelId: fallback
+    }
+  }
+}
+
+async function resolvePreferredLocalModelId(baseUrl: string, fallback: string) {
+  const discovery = await discoverLocalModelIds(baseUrl, fallback)
+  return discovery.defaultModelId
+}
+
+async function testOpenClawModelConnection(settings: OpenClawSettings): Promise<OpenClawModelConnectionResult> {
+  const normalizedBaseUrl = settings.modelBaseUrl.trim()
+
+  if (settings.modelProviderId === 'ollama' || isDefaultLocalModelBaseUrl(normalizedBaseUrl)) {
+    const ollamaModelIds = await fetchOllamaModelIds()
+    if (ollamaModelIds.length > 0) {
+      return {
+        success: true,
+        message: `连接成功，已发现 ${ollamaModelIds.length} 个 Ollama 模型。`,
+        modelIds: ollamaModelIds
+      }
+    }
+  }
+
+  const modelIds = await fetchAvailableModelIds(normalizedBaseUrl, settings.modelApiKey)
+  return {
+    success: true,
+    message: modelIds.length > 0
+      ? `连接成功，已读取到 ${modelIds.length} 个模型。`
+      : '连接成功，但当前接口没有返回可用模型列表。',
+    modelIds
+  }
+}
+
+async function resolveSettingsModelId(currentConfig: OpenClawConfigObject, settings: OpenClawSettings) {
+  const defaultsSection = asRecord(asRecord(currentConfig.agents).defaults)
+  const modelSection = asRecord(defaultsSection.model)
+  const hasConfiguredPrimaryModel = readString(modelSection.primary).trim().length > 0
+  const defaultSettings = getDefaultOpenClawSettings()
+  const shouldAutoDetectModelId = !settings.modelId.trim() || settings.modelId === defaultSettings.modelId
+
+  const shouldUseOllamaDetection = settings.modelProviderId === 'ollama'
+  const shouldUseLocalCompatibleDetection = isDefaultLocalModelBaseUrl(settings.modelBaseUrl)
+
+  if (hasConfiguredPrimaryModel || (!shouldUseOllamaDetection && !shouldUseLocalCompatibleDetection) || !shouldAutoDetectModelId) {
+    return settings
+  }
+
+  const fallbackModelId = settings.modelId || defaultSettings.modelId || DEFAULT_LOCAL_MODEL_FALLBACK
+  const detectedModelId = shouldUseOllamaDetection
+    ? selectDefaultModelId(await fetchOllamaModelIds(), fallbackModelId)
+    : await resolvePreferredLocalModelId(settings.modelBaseUrl, fallbackModelId)
+
+  return detectedModelId === settings.modelId
+    ? settings
+    : { ...settings, modelId: detectedModelId }
 }
 
 async function ensurePnpmHomeConfigured(pnpmPath: string | null) {

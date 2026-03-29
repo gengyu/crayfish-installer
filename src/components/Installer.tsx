@@ -1,55 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { SystemInfo } from '../types'
+import type { ExistingInstall, OpenClawUninstallOptions, SystemInfo } from '../types'
+import { deriveInstallerUiState, getPlatformName, type InstallStage, type InstallState, type RuntimeStatus } from '../lib/installer-state'
 import ProgressBar from './ProgressBar'
 
 interface InstallerProps {
   systemInfo: SystemInfo | null
-  existingInstall: { exists: boolean; path: string | null; version: { version: string; installDate: string } | null } | null
+  existingInstall: ExistingInstall | null
   onInstallationChanged: () => void
   onBackToSettings?: () => void
 }
 
-type InstallStage =
-  | 'idle'
-  | 'selecting'
-  | 'checking'
-  | 'preparing'
-  | 'downloading'
-  | 'verifying'
-  | 'extracting'
-  | 'finalizing'
-  | 'uninstalling'
-  | 'completed'
-  | 'error'
-
-interface InstallState {
-  stage: InstallStage
-  progress: number
-  installPath: string
-  error: string | null
-  warning: string | null
-  detail: string
-  errorDetail: string | null
-  warningDetail: string | null
-  attempts: number
-}
-
-interface RuntimeStatus {
-  commands: {
-    node: { exists: boolean; path: string | null; version: string | null }
-    npm: { exists: boolean; path: string | null; version: string | null }
-    pnpm: { exists: boolean; path: string | null; version: string | null }
-    openclaw: { exists: boolean; path: string | null; version: string | null }
-  }
-  gateway: {
-    running: boolean
-    port: number
-  }
-  registry: { npm: string | null; pnpm: string | null }
-  mirrorRecommended: boolean
-}
-
 export default function Installer({ systemInfo, existingInstall, onInstallationChanged, onBackToSettings }: InstallerProps) {
+  const defaultUninstallOptions: OpenClawUninstallOptions = {
+    removeConfig: false,
+    removeOpenClaw: true,
+    removeNode: false,
+    removeWorkspace: false
+  }
   const [state, setState] = useState<InstallState>({
     stage: 'idle',
     progress: 0,
@@ -64,8 +31,14 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
   const [dependencies, setDependencies] = useState<Record<string, boolean> | null>(null)
   const [installDetected, setInstallDetected] = useState(Boolean(existingInstall?.exists))
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus | null>(null)
-  const [showDetails, setShowDetails] = useState(true)
+  const [showDetails, setShowDetails] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showUninstallDialog, setShowUninstallDialog] = useState(false)
+  const [isUninstalling, setIsUninstalling] = useState(false)
+  const [uninstallCompleted, setUninstallCompleted] = useState(false)
+  const [uninstallDialogError, setUninstallDialogError] = useState<string | null>(null)
+  const [removedItems, setRemovedItems] = useState<string[]>([])
+  const [uninstallOptions, setUninstallOptions] = useState<OpenClawUninstallOptions>(defaultUninstallOptions)
   const activeOperationRef = useRef<'install' | 'uninstall' | null>(null)
 
   const refreshRuntimeState = useCallback(async () => {
@@ -185,6 +158,15 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     }
   }
 
+  const handleRequestUninstall = () => {
+    setUninstallOptions(defaultUninstallOptions)
+    setUninstallDialogError(null)
+    setIsUninstalling(false)
+    setUninstallCompleted(false)
+    setRemovedItems([])
+    setShowUninstallDialog(true)
+  }
+
   const handleUninstall = async () => {
     const targetPath = state.installPath || existingInstall?.path
     if (!targetPath) {
@@ -192,6 +174,9 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     }
 
     activeOperationRef.current = 'uninstall'
+    setIsUninstalling(true)
+    setUninstallDialogError(null)
+    setUninstallCompleted(false)
     setIsSubmitting(true)
     setState(prev => ({
       ...prev,
@@ -204,8 +189,12 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
       }))
 
     try {
-      const result = await window.electronAPI.uninstallOpenClaw(targetPath)
+      const result = await window.electronAPI.uninstallOpenClaw({
+        installPath: targetPath,
+        options: uninstallOptions
+      })
       if (!result.success) {
+        setUninstallDialogError(result.error || '卸载失败')
         setState(prev => ({
           ...prev,
           stage: 'error',
@@ -228,6 +217,8 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
         warningDetail: null,
         attempts: 0
       }))
+      setRemovedItems(result.removedItems || uninstallTargets)
+      setUninstallCompleted(true)
 
       activeOperationRef.current = null
       setIsSubmitting(false)
@@ -235,9 +226,11 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
       const nextRuntimeStatus = await refreshRuntimeState()
       setInstallDetected(nextRuntimeStatus.commands.openclaw.exists)
       onInstallationChanged()
+      setUninstallDialogError(null)
     } finally {
       activeOperationRef.current = null
       setIsSubmitting(false)
+      setIsUninstalling(false)
     }
   }
 
@@ -258,104 +251,37 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
     }
   }
 
-  const getStageText = () => {
-    switch (state.stage) {
-      case 'downloading':
-        return '正在安装 openclaw'
-      case 'preparing':
-        return '正在准备 pnpm 和镜像'
-      case 'finalizing':
-        return '正在执行 onboard'
-      case 'uninstalling':
-        return '正在卸载'
-      case 'completed':
-        return '安装完成！'
-      case 'checking':
-        return '正在检查环境'
-      default:
-        return ''
-    }
-  }
-
-  const isInstalling = ['checking', 'preparing', 'downloading', 'verifying', 'extracting', 'finalizing'].includes(state.stage)
-  const isUninstalling = state.stage === 'uninstalling' && state.progress < 100
-  const isBusy = isSubmitting || isInstalling || isUninstalling
-  const isInstalled = installDetected || Boolean(existingInstall?.exists) || Boolean(runtimeStatus?.commands.openclaw.exists)
-  const isGatewayRunning = Boolean(runtimeStatus?.gateway.running)
-  const isSupportedDesktopPlatform = systemInfo
-    ? systemInfo.platform === 'win32' || systemInfo.platform === 'darwin'
-    : true
-
-  // 获取平台显示名称
-  const getPlatformName = (platform: string) => {
-    const names: Record<string, string> = {
-      win32: 'Windows',
-      darwin: 'macOS',
-      linux: 'Linux'
-    }
-    return names[platform] || platform
-  }
-
-  const runtimeSummary = runtimeStatus ? [
-    {
-      label: 'Node.js 环境',
-      value: runtimeStatus.commands.node.exists ? (runtimeStatus.commands.node.version || '已安装') : '待安装',
-      done: runtimeStatus.commands.node.exists
-    },
-    {
-      label: '核心依赖',
-      value: runtimeStatus.commands.pnpm.exists ? (runtimeStatus.commands.pnpm.version || '已配置') : '待配置',
-      done: runtimeStatus.commands.pnpm.exists
-    },
-    {
-      label: 'OpenClaw',
-      value: isGatewayRunning
-        ? '运行中'
-        : runtimeStatus.commands.openclaw.exists
-          ? (runtimeStatus.commands.openclaw.version || '已准备')
-          : '准备中',
-      done: runtimeStatus.commands.openclaw.exists
-    }
-  ] : []
-
-  const canLaunch = isInstalled && !isGatewayRunning
-  const canUninstall = isInstalled && !isBusy
-  const canOpenDirectory = Boolean(state.installPath || existingInstall?.path)
-  const environmentNote = (() => {
-    if (!dependencies) {
-      return '正在检测本机环境'
-    }
-
-    const missing = Object.entries(dependencies)
-      .filter(([, exists]) => !exists)
-      .map(([name]) => name)
-
-    if (missing.length === 0) {
-      return '环境检查已完成'
-    }
-
-    return `待补齐：${missing.join(' / ')}`
-  })()
-
-  const statusTitle = (() => {
-    if (state.stage === 'completed') {
-      return '安装完成'
-    }
-    if (state.stage === 'error') {
-      return '安装遇到问题'
-    }
-    if (isInstalled && !isBusy) {
-      return '已安装'
-    }
-    if (isBusy) {
-      return state.stage === 'uninstalling' ? '正在卸载 OpenClaw...' : '正在为你准备 OpenClaw...'
-    }
-    return ''
-  })()
+  const {
+    stageText,
+    isBusy,
+    isInstalled,
+    isGatewayRunning,
+    isSupportedDesktopPlatform,
+    runtimeSummary,
+    canLaunch,
+    canUninstall,
+    canOpenDirectory,
+    environmentNote,
+    statusTitle
+  } = deriveInstallerUiState({
+    state,
+    dependencies,
+    installDetected,
+    runtimeStatus,
+    existingInstall,
+    systemInfo,
+    isSubmitting
+  })
 
   const primaryButtonClass = 'inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-medium text-white shadow-sm shadow-brand-500/30 transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none'
   const secondaryButtonClass = 'inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-800 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400'
   const detailActionClass = 'rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-800'
+  const uninstallTargets = [
+    uninstallOptions.removeOpenClaw ? 'OpenClaw 主程序与 gateway 服务' : null,
+    uninstallOptions.removeConfig ? 'OpenClaw 配置文件' : null,
+    uninstallOptions.removeWorkspace ? 'OpenClaw workspace' : null,
+    uninstallOptions.removeNode ? 'Node.js / pnpm 环境' : null
+  ].filter((item): item is string => Boolean(item))
 
   return (
     <div className="w-full max-w-md">
@@ -363,7 +289,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
         {isInstalled && onBackToSettings ? (
           <div className="border-b border-slate-100 bg-slate-50 px-8 py-3">
             <button
-              className="text-sm font-medium text-slate-600 transition hover:text-slate-900"
+              className="window-no-drag text-sm font-medium text-slate-600 transition hover:text-slate-900"
               onClick={onBackToSettings}
               type="button"
             >
@@ -398,7 +324,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
                 <div>
                   <ProgressBar
                     progress={state.progress}
-                    stage={getStageText()}
+                    stage={stageText}
                     detail={state.detail}
                   />
                 </div>
@@ -499,7 +425,7 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
                     </button>
                   ) : null}
                   {canUninstall ? (
-                    <button className={`${detailActionClass} border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700`} onClick={handleUninstall} type="button">
+                    <button className={`${detailActionClass} border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700`} onClick={handleRequestUninstall} type="button">
                       卸载
                     </button>
                   ) : null}
@@ -578,6 +504,161 @@ export default function Installer({ systemInfo, existingInstall, onInstallationC
           )}
         </div>
       </div>
+
+      {showUninstallDialog ? (
+        <div className="window-no-drag fixed inset-0 z-40 flex items-center justify-center bg-slate-950/35 p-4">
+          <div className="w-full max-w-lg rounded-[28px] border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="space-y-2">
+              <h2 className="text-xl font-bold text-slate-950">确认卸载 OpenClaw</h2>
+              {isUninstalling ? (
+                <p className="text-sm leading-6 text-slate-500">
+                  正在执行卸载，请保持窗口打开。完成后这里会自动关闭。
+                </p>
+              ) : (
+                <p className="text-sm leading-6 text-slate-500">
+                  默认会执行最小卸载，只移除 OpenClaw 主程序和 gateway 服务。你也可以按当前安装器实际写入的内容，额外清理配置、workspace，以及自动补齐的 Node.js / pnpm 环境。
+                </p>
+              )}
+            </div>
+
+            {isUninstalling ? (
+              <div className="mt-5 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-red-500" />
+                  <div>
+                    <div className="text-sm font-semibold text-slate-900">正在卸载</div>
+                    <div className="text-xs leading-5 text-slate-500">{state.detail || '正在处理卸载步骤...'}</div>
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">本次将删除</div>
+                  <div className="flex flex-wrap gap-2">
+                    {uninstallTargets.map((target) => (
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700" key={target}>
+                        {target}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+                  卸载过程中请不要关闭窗口或重复点击按钮。
+                </div>
+              </div>
+            ) : uninstallCompleted ? (
+              <>
+                <div className="mt-5 space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                  <div>
+                    <div className="text-sm font-semibold text-emerald-800">卸载已完成</div>
+                    <div className="mt-1 text-xs leading-5 text-emerald-700">
+                      OpenClaw 已完成本次清理。你可以确认下面的结果后，再关闭这个窗口。
+                    </div>
+                  </div>
+                  <div>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700/70">本次已卸载</div>
+                    <div className="flex flex-wrap gap-2">
+                      {removedItems.map((item) => (
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700" key={item}>
+                          {item}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 flex justify-end">
+                  <button
+                    className="window-no-drag rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
+                    onClick={() => setShowUninstallDialog(false)}
+                    type="button"
+                  >
+                    关闭
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="mt-5 space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                  <label className="flex items-start gap-3">
+                    <input
+                      checked={uninstallOptions.removeOpenClaw}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600"
+                      onChange={(event) => setUninstallOptions((current) => ({ ...current, removeOpenClaw: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">删除 OpenClaw 主程序与 gateway 服务</span>
+                      <span className="block text-xs leading-5 text-slate-500">当前安装器会全局安装 `openclaw`，并在初始化时注册 gateway 服务。默认勾选。</span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3">
+                    <input
+                      checked={uninstallOptions.removeConfig}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600"
+                      onChange={(event) => setUninstallOptions((current) => ({ ...current, removeConfig: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">删除 OpenClaw 配置文件</span>
+                      <span className="block text-xs leading-5 text-slate-500">会删除 `~/.openclaw/openclaw.json` 这类配置文件，但不会顺带删除 workspace。</span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3">
+                    <input
+                      checked={uninstallOptions.removeWorkspace}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600"
+                      onChange={(event) => setUninstallOptions((current) => ({ ...current, removeWorkspace: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">删除 OpenClaw workspace</span>
+                      <span className="block text-xs leading-5 text-slate-500">会删除当前 workspace 目录中的 agents、plugins、导入导出的 bundle 等内容。</span>
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-3">
+                    <input
+                      checked={uninstallOptions.removeNode}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-brand-600"
+                      onChange={(event) => setUninstallOptions((current) => ({ ...current, removeNode: event.target.checked }))}
+                      type="checkbox"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-slate-900">删除 Node.js / pnpm 环境</span>
+                      <span className="block text-xs leading-5 text-slate-500">仅在这些运行时是安装器为当前机器自动补齐时再勾选，默认不删，避免影响你本机其他项目。</span>
+                    </span>
+                  </label>
+                </div>
+
+                {uninstallDialogError ? (
+                  <div className="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm leading-6 text-red-700">
+                    {uninstallDialogError}
+                  </div>
+                ) : null}
+
+                <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    className="window-no-drag rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                    onClick={() => setShowUninstallDialog(false)}
+                    type="button"
+                  >
+                    返回
+                  </button>
+                  <button
+                    className="window-no-drag rounded-xl bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                    disabled={!uninstallOptions.removeOpenClaw && !uninstallOptions.removeConfig && !uninstallOptions.removeWorkspace && !uninstallOptions.removeNode}
+                    onClick={handleUninstall}
+                    type="button"
+                  >
+                    {uninstallDialogError ? '再次卸载' : '确认卸载'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

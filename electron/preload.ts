@@ -1,8 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
+  LocalModelDiscoveryResult,
   OpenClawAgentBundleResult,
+  OpenClawModelConnectionResult,
   OpenClawPluginPreset,
-  OpenClawSettings
+  OpenClawSettings,
+  OpenClawUninstallResult,
+  OpenClawUninstallOptions
 } from '../src/types'
 
 export interface SystemInfo {
@@ -38,10 +42,12 @@ export interface ElectronAPI {
   checkDiskSpace: () => Promise<{ available: boolean; path: string }>
   selectInstallPath: () => Promise<string | null>
   installOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string; detail?: string; warning?: string; warningDetail?: string; attempts?: number; installPath?: string; version?: { version: string; installDate: string; platform: string; arch: string } }>
-  uninstallOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string }>
+  uninstallOpenClaw: (payload: { installPath: string; options: OpenClawUninstallOptions }) => Promise<OpenClawUninstallResult>
   launchOpenClaw: (installPath: string) => Promise<{ success: boolean; error?: string }>
   openDirectory: (dirPath: string) => Promise<void>
   getOpenClawSettings: () => Promise<OpenClawSettings>
+  getLocalModelDiscovery: () => Promise<LocalModelDiscoveryResult>
+  testOpenClawModelConnection: (settings: OpenClawSettings) => Promise<OpenClawModelConnectionResult>
   saveOpenClawSettings: (settings: OpenClawSettings) => Promise<{ success: boolean; configPath: string }>
   getOpenClawPluginPresets: () => Promise<OpenClawPluginPreset[]>
   applyOpenClawPluginPreset: (presetId: string) => Promise<{ success: boolean; configPath: string }>
@@ -62,10 +68,12 @@ const api: ElectronAPI = {
   checkDiskSpace: () => ipcRenderer.invoke('check-disk-space'),
   selectInstallPath: () => ipcRenderer.invoke('select-install-path'),
   installOpenClaw: (installPath: string) => ipcRenderer.invoke('install-openclaw', installPath),
-  uninstallOpenClaw: (installPath: string) => ipcRenderer.invoke('uninstall-openclaw', installPath),
+  uninstallOpenClaw: (payload: { installPath: string; options: OpenClawUninstallOptions }) => ipcRenderer.invoke('uninstall-openclaw', payload),
   launchOpenClaw: (installPath: string) => ipcRenderer.invoke('launch-openclaw', installPath),
   openDirectory: (dirPath: string) => ipcRenderer.invoke('open-directory', dirPath),
   getOpenClawSettings: () => ipcRenderer.invoke('get-openclaw-settings'),
+  getLocalModelDiscovery: () => ipcRenderer.invoke('get-local-model-discovery'),
+  testOpenClawModelConnection: (settings: OpenClawSettings) => ipcRenderer.invoke('test-openclaw-model-connection', settings),
   saveOpenClawSettings: (settings: OpenClawSettings) => ipcRenderer.invoke('save-openclaw-settings', settings),
   getOpenClawPluginPresets: () => ipcRenderer.invoke('get-openclaw-plugin-presets'),
   applyOpenClawPluginPreset: (presetId: string) => ipcRenderer.invoke('apply-openclaw-plugin-preset', presetId),

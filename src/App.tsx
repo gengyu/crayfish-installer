@@ -36,7 +36,8 @@ function App() {
         onGoToInstaller={() => setShowInstallerView(true)}
       />
     ) : (
-      <div className="flex min-h-screen flex-col">
+      <div className="relative flex min-h-screen flex-col pt-14">
+        <div className="window-drag fixed inset-x-0 top-0 z-20 h-14 pl-20" />
         <main className="flex flex-1 items-center justify-center p-4">
           <Installer
             systemInfo={systemInfo}
@@ -50,7 +51,7 @@ function App() {
           <p>
             <a 
               href="#" 
-              className="text-slate-600 transition hover:underline"
+              className="window-no-drag text-slate-600 transition hover:underline"
               onClick={(e) => {
                 e.preventDefault()
                 window.open('https://github.com/openclaw/openclaw', '_blank')
