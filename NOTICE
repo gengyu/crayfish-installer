@@ -1,0 +1,13 @@
+小龙虾安装器
+Copyright 2026 小龙虾安装器 contributors
+
+This product includes software developed by the 小龙虾安装器 contributors.
+
+Attribution and author rights:
+- Redistribution and derivative distributions should preserve this NOTICE file and the Apache-2.0 license text.
+- Modified versions should clearly state that changes were made.
+- The project name, logo, and other brand identifiers are not granted for unrestricted trademark use; please describe forks or derivative releases in a way that avoids confusion with the original project.
+
+Third-party references:
+- This project provides a graphical installer and configuration workspace for OpenClaw and may reference third-party projects, services, or plugin ecosystems for compatibility and onboarding purposes.
+- Third-party names, logos, and service marks remain the property of their respective owners.

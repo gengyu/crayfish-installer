@@ -2,6 +2,7 @@
   "name": "openclaw-installer",
   "version": "1.0.0",
   "description": "小龙虾一键安装客户端，面向不会代码和命令行的 Windows/macOS 用户",
+  "license": "Apache-2.0",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -51,7 +52,7 @@
   "build": {
     "appId": "com.crayfish.installer",
     "productName": "小龙虾安装器",
-    "copyright": "Copyright © 2026 小龙虾安装器",
+    "copyright": "Copyright © 2026 小龙虾安装器 contributors",
     "directories": {
       "output": "release",
       "buildResources": "build"
