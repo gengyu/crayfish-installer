@@ -55,6 +55,59 @@ pnpm build:win:arm64
 
 产物默认输出到 `release/`。
 
+## 发布到 GitHub Release
+
+仓库已预配置 GitHub Release 发布目标：
+
+- owner: `gengyu`
+- repo: `crayfish-installer`
+
+### 方式一：本地发布
+
+本地发布时需要在当前 shell 提供 `GH_TOKEN`：
+
+```bash
+export GH_TOKEN=你的_github_pat
+pnpm build:release
+```
+
+只发布单平台：
+
+```bash
+pnpm build:release:mac
+pnpm build:release:win
+```
+
+`GitHub Desktop` 的登录状态不能替代 `GH_TOKEN`。`electron-builder` 上传 Release 资产时走的是 GitHub API token。
+
+### 方式二：GitHub Actions 自动发布
+
+仓库已包含工作流：
+
+- [.github/workflows/release.yml](./.github/workflows/release.yml)
+
+默认行为：
+
+- 推送 tag `v*` 时自动发布
+- 也支持手动触发 `workflow_dispatch`
+- `macos-latest` 负责构建并上传 `.dmg`
+- `windows-latest` 负责构建并上传 `.exe`
+
+这个工作流默认使用 GitHub Actions 自带的 `secrets.GITHUB_TOKEN`，通常不需要你再额外创建 `GH_TOKEN` secret。
+
+### 推荐发布流程
+
+1. 更新 `package.json` 里的版本号
+2. 提交并推送代码到 `main`
+3. 打 tag 并推送
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+4. 等待 GitHub Actions 自动完成 Release 产物上传
+
 ## 项目结构
 
 ```text

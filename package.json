@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "description": "小龙虾一键安装客户端，面向不会代码和命令行的 Windows/macOS 用户",
   "license": "Apache-2.0",
+  "packageManager": "pnpm@10",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gengyu/crayfish-installer.git"
+  },
+  "homepage": "https://github.com/gengyu/crayfish-installer",
+  "bugs": {
+    "url": "https://github.com/gengyu/crayfish-installer/issues"
+  },
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -10,6 +19,9 @@
     "build:win": "tsc && vite build && electron-builder --win nsis --x64",
     "build:win:arm64": "tsc && vite build && electron-builder --win nsis --arm64",
     "build:mac": "tsc && vite build && electron-builder --mac dmg",
+    "build:release": "tsc && vite build && electron-builder --publish always",
+    "build:release:mac": "tsc && vite build && electron-builder --mac dmg --publish always",
+    "build:release:win": "tsc && vite build && electron-builder --win nsis --x64 --publish always",
     "preview": "vite preview",
     "electron:dev": "cross-env NODE_ENV=development electron .",
     "test": "vitest run",
@@ -63,6 +75,14 @@
       "dist-electron/**/*"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "gengyu",
+        "repo": "crayfish-installer",
+        "releaseType": "release"
+      }
+    ],
     "mac": {
       "icon": "build/icon.icns",
       "target": [
