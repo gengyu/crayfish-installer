@@ -1,6 +1,6 @@
 # 小龙虾安装器
 
-面向 OpenClaw 的桌面安装器与配置工作台，帮助不熟悉命令行的用户在 Windows 和 macOS 上完成安装、配置、插件接入与智能体工作区管理。
+面向 OpenClaw 的桌面安装器与配置工作台，帮助不熟悉命令行的用户在 Windows、macOS 和 Linux 上完成安装、配置、插件接入与智能体工作区管理。
 
 它不是 OpenClaw 本体，而是一个围绕 OpenClaw CLI、配置文件和常见接入流程构建的图形化桌面应用。
 
@@ -49,11 +49,35 @@ pnpm dev
 ```bash
 pnpm build
 pnpm build:mac
+pnpm build:mac:x64
+pnpm build:mac:arm64
 pnpm build:win
+pnpm build:win:x64
 pnpm build:win:arm64
+pnpm build:linux
+pnpm build:linux:x64
+pnpm build:linux:arm64
 ```
 
 产物默认输出到 `release/`。
+
+### 打包命令说明
+
+- `pnpm build`：按当前宿主机默认目标打包
+- `pnpm build:dir`：仅生成解包目录，便于本地验收
+- `pnpm build:mac`：生成 macOS 安装包，默认包含 `.dmg` 和 `.zip`
+- `pnpm build:mac:x64`：生成 Intel Mac 版本
+- `pnpm build:mac:arm64`：生成 Apple Silicon 版本
+- `pnpm build:win`：生成 Windows 安装包
+- `pnpm build:linux`：生成 Linux 安装包，默认包含 `AppImage` 和 `deb`
+
+### macOS 说明
+
+- 当前配置会同时产出 `.dmg` 和 `.zip`
+- 推荐发布时保留两种产物：
+  `.dmg` 适合普通用户下载安装
+  `.zip` 更方便后续接入自动更新或做 CI 分发
+- Apple Silicon 与 Intel 机型建议分别执行 `build:mac:arm64` 和 `build:mac:x64`
 
 ## 发布到 GitHub Release
 
@@ -90,8 +114,9 @@ pnpm build:release:win
 
 - 推送 tag `v*` 时自动发布
 - 也支持手动触发 `workflow_dispatch`
-- `macos-latest` 负责构建并上传 `.dmg`
+- `macos-latest` 建议同时构建并上传 `.dmg` 与 `.zip`
 - `windows-latest` 负责构建并上传 `.exe`
+- 如需 Linux 分发，可补充 `ubuntu-latest` 上传 `AppImage` 与 `deb`
 
 这个工作流默认使用 GitHub Actions 自带的 `secrets.GITHUB_TOKEN`，通常不需要你再额外创建 `GH_TOKEN` secret。
 

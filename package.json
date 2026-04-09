@@ -1,9 +1,13 @@
 {
-  "name": "openclaw-installer",
+  "name": "crayfish-installer",
   "version": "1.0.0",
-  "description": "小龙虾一键安装客户端，面向不会代码和命令行的 Windows/macOS 用户",
+  "description": "小龙虾一键安装客户端，支持 Windows、macOS、Linux 多端打包与分发",
   "license": "Apache-2.0",
-  "packageManager": "pnpm@10",
+  "packageManager": "pnpm@10.13.1",
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=10"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/gengyu/crayfish-installer.git"
@@ -16,17 +20,32 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && electron-builder",
-    "build:win": "tsc && vite build && electron-builder --win nsis --x64",
-    "build:win:arm64": "tsc && vite build && electron-builder --win nsis --arm64",
-    "build:mac": "tsc && vite build && electron-builder --mac dmg",
+    "build:dir": "tsc && vite build && electron-builder --dir",
+    "build:win": "tsc && vite build && electron-builder --win",
+    "build:win:x64": "tsc && vite build && electron-builder --win --x64",
+    "build:win:arm64": "tsc && vite build && electron-builder --win --arm64",
+    "build:mac": "tsc && vite build && electron-builder --mac",
+    "build:mac:x64": "tsc && vite build && electron-builder --mac --x64",
+    "build:mac:arm64": "tsc && vite build && electron-builder --mac --arm64",
+    "build:linux": "tsc && vite build && electron-builder --linux",
+    "build:linux:x64": "tsc && vite build && electron-builder --linux --x64",
+    "build:linux:arm64": "tsc && vite build && electron-builder --linux --arm64",
     "build:release": "tsc && vite build && electron-builder --publish always",
-    "build:release:mac": "tsc && vite build && electron-builder --mac dmg --publish always",
-    "build:release:win": "tsc && vite build && electron-builder --win nsis --x64 --publish always",
+    "build:release:mac": "tsc && vite build && electron-builder --mac --publish always",
+    "build:release:mac:x64": "tsc && vite build && electron-builder --mac --x64 --publish always",
+    "build:release:mac:arm64": "tsc && vite build && electron-builder --mac --arm64 --publish always",
+    "build:release:win": "tsc && vite build && electron-builder --win --publish always",
+    "build:release:win:x64": "tsc && vite build && electron-builder --win --x64 --publish always",
+    "build:release:win:arm64": "tsc && vite build && electron-builder --win --arm64 --publish always",
+    "build:release:linux": "tsc && vite build && electron-builder --linux --publish always",
+    "build:release:linux:x64": "tsc && vite build && electron-builder --linux --x64 --publish always",
+    "build:release:linux:arm64": "tsc && vite build && electron-builder --linux --arm64 --publish always",
     "preview": "vite preview",
     "electron:dev": "cross-env NODE_ENV=development electron .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "electron-log": "^5.0.1",
@@ -75,6 +94,7 @@
       "dist-electron/**/*"
     ],
     "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "asar": true,
     "publish": [
       {
         "provider": "github",
@@ -86,9 +106,11 @@
     "mac": {
       "icon": "build/icon.icns",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
-      "category": "public.app-category.games"
+      "category": "public.app-category.utilities",
+      "darkModeSupport": true
     },
     "win": {
       "icon": "build/icon.ico",
@@ -96,11 +118,36 @@
         {
           "target": "nsis",
           "arch": [
-            "x64"
+            "x64",
+            "arm64"
           ]
         }
       ],
-      "executableName": "OpenClawInstaller"
+      "executableName": "CrayfishInstaller"
+    },
+    "linux": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "maintainer": "gengyu",
+      "desktop": {
+        "StartupWMClass": "小龙虾安装器"
+      }
     },
     "nsis": {
       "oneClick": false,

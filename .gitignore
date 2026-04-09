@@ -12,3 +12,6 @@ coverage
 *.pid
 *.pid.lock
 release
+marketing/xiaohongshu/.export/
+marketing/xiaohongshu/references/
+marketing
